@@ -33,6 +33,7 @@
     <Reference Include="System" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="BitPseudoLruMap.cs" />
     <Compile Include="IReadOnlyMap.cs" />
     <Compile Include="GenerationalMap.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

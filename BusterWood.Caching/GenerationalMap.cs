@@ -9,10 +9,11 @@ namespace BusterWood.Caching
     public class GenerationalMap<TKey, TValue> : IReadOnlyMap<TKey, TValue>
     {
         readonly IReadOnlyMap<TKey, TValue> _nextLevel;
-        readonly SemaphoreSlim _lock;
+        readonly SemaphoreSlim _lock; // the only lock that support "WaitAsync()"
         internal Dictionary<TKey, TValue> _gen0;
         internal Dictionary<TKey, TValue> _gen1;
         readonly int _gen0Limit;
+        readonly IEqualityComparer<TValue> _comparer;
 
         public GenerationalMap(IReadOnlyMap<TKey, TValue> nextLevel, int gen0Limit)
         {
@@ -24,6 +25,7 @@ namespace BusterWood.Caching
             _gen0 = new Dictionary<TKey, TValue>();
             _gen0Limit = gen0Limit;
             _lock = new SemaphoreSlim(1);
+            _comparer = EqualityComparer<TValue>.Default;
         }
 
         public TValue Get(TKey key)
@@ -42,7 +44,7 @@ namespace BusterWood.Caching
             try
             {
                 if (_gen0.TryGetValue(key, out value))
-                    return false;
+                    return true;
 
                 if (_gen1?.TryGetValue(key, out value) == true)
                 {
@@ -96,7 +98,7 @@ namespace BusterWood.Caching
                 // key not found by this point
                 value = await _nextLevel.GetAsync(key);
 
-                if (default(TValue).Equals(value)) // NOTE: possible boxing
+                if (_comparer.Equals(default(TValue), value)) // NOTE: possible boxing
                     return value; // not found
 
                 // about to add, check the limit
