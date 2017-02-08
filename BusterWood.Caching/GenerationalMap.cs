@@ -25,34 +25,38 @@ namespace BusterWood.Caching
             _gen0Limit = gen0Limit;
             _lock = new SemaphoreSlim(1);
         }
-        
-        /// <summary>Tries to get a value from this cache, or load it from the underlying cache</summary>
-        /// <param name="key">Teh key to find</param>
-        /// <returns>The value found, or default(T) if not found</returns>
+
         public TValue Get(TKey key)
         {
             TValue value;
+            TryGet(key, out value);
+            return value;
+        }
+
+        /// <summary>Tries to get a value from this cache, or load it from the underlying cache</summary>
+        /// <param name="key">Teh key to find</param>
+        /// <returns>The value found, or default(T) if not found</returns>
+        public bool TryGet(TKey key, out TValue value)
+        {
             _lock.Wait();
             try
             {
                 if (_gen0.TryGetValue(key, out value))
-                    return value;
+                    return false;
 
                 if (_gen1?.TryGetValue(key, out value) == true)
                 {
                     // promote from Gen1 => Gen0
                     _gen1.Remove(key);
                     _gen0.Add(key, value);
-                    return value;
+                    return true;
                 }
 
                 // key not found by this point
-                value = _nextLevel.Get(key); // NOTE: possible blocking
+                if (!_nextLevel.TryGet(key, out value)) // NOTE: possible blocking
+                    return false; // not found
 
-                if (Equals(default(TValue), value)) // NOTE: possible boxing
-                    return value; // not found
-
-                // about to add, check the limmit
+                // about to add, check the limit
                 if (_gen0.Count >= _gen0Limit)
                 {
                     _gen1 = _gen0; // Gen1 items are dropped from the cache at this point
@@ -61,7 +65,7 @@ namespace BusterWood.Caching
 
                 // a new item in the cache
                 _gen0.Add(key, value);
-                return value;
+                return true;
             }
             finally
             {
@@ -95,7 +99,7 @@ namespace BusterWood.Caching
                 if (default(TValue).Equals(value)) // NOTE: possible boxing
                     return value; // not found
 
-                // about to add, check the limmit
+                // about to add, check the limit
                 if (_gen1.Count >= _gen0Limit)
                 {
                     _gen1 = _gen0; // Gen1 items are dropped from the cache at this point

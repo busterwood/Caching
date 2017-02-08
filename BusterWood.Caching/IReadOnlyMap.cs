@@ -7,6 +7,7 @@ namespace BusterWood.Caching
     public interface IReadOnlyMap<TKey, TValue>
     {
         TValue Get(TKey key);
+        bool TryGet(TKey key, out TValue value);
         Task<TValue> GetAsync(TKey key);
     }
 
