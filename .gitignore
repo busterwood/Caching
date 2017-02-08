@@ -250,3 +250,6 @@ paket-files/
 # JetBrains Rider
 .idea/
 *.sln.iml
+
+*.v3.ncrunchproject
+*.v3.ncrunchsolution
