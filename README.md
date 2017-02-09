@@ -1,7 +1,7 @@
 # Caching
 A low memory overhead read-through cache implemented using generations.
 
-The `GenerationalMap<TKey, TValue>` is a read-though cache that is typically used for caching items read from an underlying data source.
+The `GenerationalMap<TKey, TValue>` is a read-though cache used for caching items read from an underlying data source.
 
 # How does it work?
 
@@ -22,7 +22,7 @@ The `GenerationalMap<TKey, TValue>` contructor takes two arguments that control 
 One or both parameters neeed to be set, i.e.
 
 * you can just specify a `gen0Limit`, but then an the cache will never be cleared, even if it is not used again for a long time
-* you can just specify a `halfLife` and let the cache grow to any size, just collection at regular intervals
+* you can just specify a `halfLife` which will let the cache grow to any size but will ensure items not used for "a long time" are evicted
 * you can specify both `gen0Limit` and `halfLife` to combine the attributes of both
 
 # Memory Overhead
@@ -62,6 +62,8 @@ The following shows the memory allocated and final bytes held for adding a numbe
 | System.Runtime.Caching | 1,734 ms | 126,253,192 | 113,435,316 | 226.87 |
 
 # Performance 
+
+The following tests compare a generation cache with a Bit-Pseduo LRU cache.
 
 ### 10,000 items added
 
