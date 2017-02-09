@@ -29,15 +29,14 @@ One or both parameters neeed to be set, i.e.
 
 | Test | Iterations | Elapsed | Bytes allocated | Bytes held | Bytes held per key |
 | ---- | ---------- | ------- | --------------- | ---------- | ------------------ |
-| BitPseudoLru_cache_memory_overhead | 1000 | 0 ms | 332,368 | | 39,020 | 39.02 |
-| BitPseudoLru_cache_memory_overhead | 10000 | 6 ms | 3,209,644 | | 352,732 | 35.27 |
-| BitPseudoLru_cache_memory_overhead | 100000 | 87 ms | 6,706,612 | | 3,148,456 | 31.48 |
-| BitPseudoLru_cache_memory_overhead | 500000 | 323 ms | 26,092,824 | | 13,540,636 | 27.08 |
-| generational_cache_memory_overhead | 1000 | 0 ms | 324,368 | | 37,020 | 37.02 |
-| generational_cache_memory_overhead | 10000 | 5 ms | 3,170,704 | | 337,028 | 33.70 |
-| generational_cache_memory_overhead | 100000 | 79 ms | 8,092,948 | | 3,017,508 | 30.18 |
-| generational_cache_memory_overhead | 500000 | 329 ms | 24,726,088 | | 12,978,060 | 25.96 |
-| Test | Iterations | Elapsed | Items in cache | Bytes allocated | Bytes held | Bytes held per key |
+| BitPseudoLru_cache_memory_overhead | 1000 | 0 ms | 332,368 | 39,020 | 39.02 |
+| BitPseudoLru_cache_memory_overhead | 10000 | 6 ms | 3,209,644 | 352,732 | 35.27 |
+| BitPseudoLru_cache_memory_overhead | 100000 | 87 ms | 6,706,612 | 3,148,456 | 31.48 |
+| BitPseudoLru_cache_memory_overhead | 500000 | 323 ms | 26,092,824 | 13,540,636 | 27.08 |
+| generational_cache_memory_overhead | 1000 | 0 ms | 324,368 | 37,020 | 37.02 |
+| generational_cache_memory_overhead | 10000 | 5 ms | 3,170,704 | 337,028 | 33.70 |
+| generational_cache_memory_overhead | 100000 | 79 ms | 8,092,948 | 3,017,508 | 30.18 |
+| generational_cache_memory_overhead | 500000 | 329 ms | 24,726,088 | 12,978,060 | 25.96 |
 | system_caching_memory_overhead | 1000| 20 ms | 557,084 | 361,192 | 361.19 |
 | system_caching_memory_overhead | 10000| 15 ms | 3,272,256 | 2,207,780 | 220.78 |
 | system_caching_memory_overhead | 100000| 274 ms | 22,603,416 | 21,616,504 | 216.17 |
