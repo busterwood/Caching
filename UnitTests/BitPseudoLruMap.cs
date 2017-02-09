@@ -7,9 +7,9 @@ using System.Threading.Tasks;
 
 namespace BusterWood.Caching
 {
-    public class BitPseudoLruMap<TKey, TValue> : IReadOnlyMap<TKey, TValue>
+    public class BitPseudoLruMap<TKey, TValue> : ICache<TKey, TValue>
     {
-        readonly IReadOnlyMap<TKey, TValue> _nextLevel;
+        readonly ICache<TKey, TValue> _nextLevel;
         readonly SemaphoreSlim _lock;
         readonly int _capacity;
         readonly IEqualityComparer<TKey> comparer;
@@ -28,7 +28,7 @@ namespace BusterWood.Caching
             public TValue value;         // Value of entry
         }
     
-        public BitPseudoLruMap(IReadOnlyMap<TKey, TValue> nextLevel, int capacity)
+        public BitPseudoLruMap(ICache<TKey, TValue> nextLevel, int capacity)
         {
             if (nextLevel == null)
                 throw new ArgumentNullException(nameof(nextLevel));
@@ -352,6 +352,35 @@ namespace BusterWood.Caching
             return GetPrime(newSize);
         }
 
+        public TValue[] GetBatch(IReadOnlyCollection<TKey> keys)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<TValue[]> GetBatchAsync(IReadOnlyCollection<TKey> keys)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void Invalidate(TKey key)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task InvalidateAsync(TKey key)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void Invalidate(IEnumerable<TKey> keys)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task InvalidateAsync(IEnumerable<TKey> keys)
+        {
+            throw new NotImplementedException();
+        }
     }
 
 

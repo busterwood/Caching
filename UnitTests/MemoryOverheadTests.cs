@@ -16,7 +16,7 @@ namespace UnitTests
 
         [TestCase(10000)]
         [TestCase(100000)]
-        [TestCase(200000)]
+        [TestCase(500000)]
         public void BitPseudoLru_cache_half(int items)
         {
             var sw = new Stopwatch();
@@ -38,7 +38,7 @@ namespace UnitTests
 
         [TestCase(10000)]
         [TestCase(100000)]
-        [TestCase(200000)]
+        [TestCase(500000)]
         public void generational_cache_half(int items)
         {
             var sw = new Stopwatch();

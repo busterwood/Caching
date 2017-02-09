@@ -45,7 +45,7 @@ namespace UnitTests
 
     }
 
-    class ValueIsKey<TKey, TValue> : IReadOnlyMap<TKey, TValue>
+    class ValueIsKey<TKey, TValue> : ICache<TKey, TValue>
         where TValue : TKey
     {
         public TValue Get(TKey key) => (TValue)key;
@@ -56,7 +56,37 @@ namespace UnitTests
             return true;
         }
 
-        public Task<TValue> GetAsync(TKey key) => Task.FromResult<TValue>((TValue)key);
+        public Task<TValue> GetAsync(TKey key) => Task.FromResult((TValue)key);
+
+        public TValue[] GetBatch(IReadOnlyCollection<TKey> keys)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<TValue[]> GetBatchAsync(IReadOnlyCollection<TKey> keys)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void Invalidate(TKey key)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task InvalidateAsync(TKey key)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void Invalidate(IEnumerable<TKey> keys)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task InvalidateAsync(IEnumerable<TKey> keys)
+        {
+            throw new NotImplementedException();
+        }
     }
 
 }

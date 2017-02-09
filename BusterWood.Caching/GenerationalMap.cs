@@ -9,13 +9,13 @@ namespace BusterWood.Caching
     /// A cache map that uses generations to cache to minimize the per-key overhead.
     /// A collection releases all items in Gen1 and moves Gen0 -> Gen1.  Reading an item in Gen1 promotes the item back to Gen0.
     /// </summary>
-    public class GenerationalMap<TKey, TValue> : IReadOnlyMap<TKey, TValue>, IDisposable
+    public class GenerationalMap<TKey, TValue> : ICache<TKey, TValue>, IDisposable
     {
-        readonly IReadOnlyMap<TKey, TValue> _dataSource;
+        readonly ICache<TKey, TValue> _dataSource;
         readonly SemaphoreSlim _lock; // the only lock that support "WaitAsync()"
         internal Dictionary<TKey, TValue> _gen0;
         internal Dictionary<TKey, TValue> _gen1;
-        readonly IEqualityComparer<TValue> _comparer;
+        readonly IEqualityComparer<TValue> _valueComparer;
         readonly Task _periodicCollect;
         volatile bool _stop;    // stop the periodic collection
         DateTime _lastCollection; // stops a periodic collection running if a size limit collection as happened since the last periodic GC
@@ -27,7 +27,7 @@ namespace BusterWood.Caching
         /// <param name="dataSource">The underlying source to load data from</param>
         /// <param name="gen0Limit">(Optional) limit on the number of items allowed in Gen0 before a collection</param>
         /// <param name="halfLife">(Optional) time period after which a collection occurs</param>
-        public GenerationalMap(IReadOnlyMap<TKey, TValue> dataSource, int? gen0Limit, TimeSpan? halfLife)
+        public GenerationalMap(ICache<TKey, TValue> dataSource, int? gen0Limit, TimeSpan? halfLife)
         {
             if (dataSource == null)
                 throw new ArgumentNullException(nameof(dataSource));
@@ -39,11 +39,11 @@ namespace BusterWood.Caching
                 throw new ArgumentOutOfRangeException(nameof(halfLife), "Value must be greater than zero");
 
             _dataSource = dataSource;
+            _valueComparer = EqualityComparer<TValue>.Default;
             _gen0 = new Dictionary<TKey, TValue>();
             Gen0Limit = gen0Limit;
             HalfLife = halfLife;
             _lock = new SemaphoreSlim(1);
-            _comparer = EqualityComparer<TValue>.Default;
             if (halfLife != null)
                 _periodicCollect = PeriodicCollection(halfLife.Value);
         }
@@ -72,21 +72,17 @@ namespace BusterWood.Caching
 
                 if (_gen1?.TryGetValue(key, out value) == true)
                 {
-                    // promote from Gen1 => Gen0
-                    _gen1.Remove(key);
-                    _gen0.Add(key, value);
+                    PromoteGen1ToGen0(key, value);
                     return true;
                 }
 
                 // key not found by this point
                 if (!_dataSource.TryGet(key, out value)) // NOTE: possible blocking
-                    return false; // not found
+                    return false;
 
                 // about to add, check the limit
-                if (_gen0.Count >= Gen0Limit)
-                {
+                if (Gen0LimitReached())
                     Collect();
-                }
 
                 // a new item in the cache
                 _gen0.Add(key, value);
@@ -98,8 +94,16 @@ namespace BusterWood.Caching
             }
         }
 
+        bool Gen0LimitReached() => _gen0.Count >= Gen0Limit;
+
+        void PromoteGen1ToGen0(TKey key, TValue value)
+        {
+            _gen1.Remove(key);
+            _gen0.Add(key, value);
+        }
+
         /// <summary>Tries to get a value from this cache, or load it from the underlying cache</summary>
-        /// <param name="key">Teh key to find</param>
+        /// <param name="key">The key to find</param>
         /// <returns>The value found, or default(T) if not found</returns>
         public async Task<TValue> GetAsync(TKey key)
         {
@@ -112,23 +116,19 @@ namespace BusterWood.Caching
 
                 if (_gen1?.TryGetValue(key, out value) == true)
                 {
-                    // promote from Gen1 => Gen0
-                    _gen1.Remove(key);
-                    _gen0.Add(key, value);
+                    PromoteGen1ToGen0(key, value);
                     return value;
                 }
 
                 // key not found by this point
-                value = await _dataSource.GetAsync(key);
+                value = await _dataSource.GetAsync(key); //TODO: do we need Maybe<TValue> to be returned?
 
-                if (_comparer.Equals(default(TValue), value)) // NOTE: possible boxing
+                if (_valueComparer.Equals(default(TValue), value))
                     return value; // not found
 
                 // about to add, check the limit
-                if (_gen1.Count >= Gen0Limit)
-                {
+                if (Gen0LimitReached())
                     Collect();
-                }
 
                 // a new item in the cache
                 _gen0.Add(key, value);
@@ -140,7 +140,7 @@ namespace BusterWood.Caching
             }
         }
 
-        private void Collect()
+        void Collect()
         {
             // don't create a new dictionary if both are empty
             if (_gen0.Count == 0 && (_gen1?.Count).GetValueOrDefault() == 0)
@@ -180,5 +180,188 @@ namespace BusterWood.Caching
             _stop = true;
         }
 
+        /// <summary>Tries to get the values associated with the <paramref name="keys" /></summary>
+        /// <param name="keys">The keys to find</param>
+        /// <returns>An array the same size as the input <paramref name="keys" /> that contains a value or default(T) for each key in the corresponding index</returns>
+        public TValue[] GetBatch(IReadOnlyCollection<TKey> keys)
+        {
+            _lock.Wait();
+            try
+            {
+                var results = new TValue[keys.Count];
+                var missedKeys = new List<TKey>();
+                var missedKeyIdx = new List<int>();
+                int i = 0;
+                foreach (var key in keys)
+                {
+                    TValue value;
+
+                    if (_gen0.TryGetValue(key, out value))
+                    {
+                        results[i] = value;
+                    }
+                    else if (_gen1?.TryGetValue(key, out value) == true)
+                    {
+                        PromoteGen1ToGen0(key, value);
+                        results[i] = value;
+                    }
+                    else
+                    {
+                        missedKeys.Add(key);
+                        missedKeyIdx.Add(i);
+                    }
+                    i++;
+                }
+
+                if (missedKeys.Count > 0)
+                {
+                    var loaded = _dataSource.GetBatch(missedKeys); // NOTE: possible blocking
+                    if (_gen0.Count + loaded.Length > Gen0Limit)
+                        Collect();
+
+                    int k = 0;
+                    foreach (var value in loaded)
+                    {
+                        _gen0.Add(missedKeys[k], value);
+                        var idx = missedKeyIdx[k];
+                        results[idx] = value;
+                        k++;
+                    }
+                }
+
+                return results;
+            }
+            finally
+            {
+                _lock.Release();
+            }
+        }
+
+        /// <summary>Tries to get the values associated with the <paramref name="keys" /></summary>
+        /// <param name="keys">The keys to find</param>
+        /// <returns>An array the same size as the input <paramref name="keys" /> that contains a value or default(T) for each key in the corresponding index</returns>
+        public async Task<TValue[]> GetBatchAsync(IReadOnlyCollection<TKey> keys)
+        {
+            await _lock.WaitAsync();
+            try
+            {
+                var results = new TValue[keys.Count];
+                var missedKeys = new List<TKey>();
+                var missedKeyIdx = new List<int>();
+                int i = 0;
+                foreach (var key in keys)
+                {
+                    TValue value;
+
+                    if (_gen0.TryGetValue(key, out value))
+                    {
+                        results[i] = value;
+                    }
+                    else if (_gen1?.TryGetValue(key, out value) == true)
+                    {
+                        PromoteGen1ToGen0(key, value);
+                        results[i] = value;
+                    }
+                    else
+                    {
+                        missedKeys.Add(key);
+                        missedKeyIdx.Add(i);
+                    }
+                    i++;
+                }
+
+                if (missedKeys.Count > 0)
+                {
+                    var loaded = await _dataSource.GetBatchAsync(missedKeys);
+                    if (_gen0.Count + loaded.Length > Gen0Limit)
+                        Collect();
+
+                    int k = 0;
+                    foreach (var value in loaded)
+                    {
+                        _gen0.Add(missedKeys[k], value);
+                        var idx = missedKeyIdx[k];
+                        results[idx] = value;
+                        k++;
+                    }
+                }
+
+                return results;
+            }
+            finally
+            {
+                _lock.Release();
+            }
+        }
+
+        /// <summary>Removes a <param name="key" /> (and value) from the cache, if it exists.</summary>
+        public void Invalidate(TKey key)
+        {
+            _lock.Wait();
+            try
+            {
+                InvalidateKey(key);
+            }
+            finally
+            {
+                _lock.Release();
+            }
+        }
+
+        /// <summary>Removes a <param name="key" /> (and value) from the cache, if it exists.</summary>
+        public async Task InvalidateAsync(TKey key)
+        {
+            await _lock.WaitAsync();
+            try
+            {
+                InvalidateKey(key);
+            }
+            finally
+            {
+                _lock.Release();
+            }
+        }
+
+        /// <summary>Removes a a number of <paramref name="keys" /> (and value) from the cache, if it exists.</summary>
+        public void Invalidate(IEnumerable<TKey> keys)
+        {
+            _lock.Wait();
+            try
+            {
+                InvalidateKeys(keys);
+            }
+            finally
+            {
+                _lock.Release();
+            }
+        }
+
+        /// <summary>Removes a a number of <paramref name="keys" /> (and value) from the cache, if it exists.</summary>
+        public async Task InvalidateAsync(IEnumerable<TKey> keys)
+        {
+            await _lock.WaitAsync();
+            try
+            {
+                InvalidateKeys(keys);
+            }
+            finally
+            {
+                _lock.Release();
+            }
+        }
+
+        void InvalidateKeys(IEnumerable<TKey> keys)
+        {
+            foreach (var key in keys)
+            {
+                InvalidateKey(key);
+            }
+        }
+
+        void InvalidateKey(TKey key)
+        {
+            if (!_gen0.Remove(key))
+                _gen1.Remove(key);
+        }
     }
 }
