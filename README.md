@@ -27,7 +27,7 @@ One or both parameters neeed to be set, i.e.
 
 # Memory Overhead
 
-The folloing shows the memory allocated, and final bytes held:
+The following shows the memory allocated and final bytes held for adding a number of items to the cache.  No collection (or eviction)  occurs during these tests.
 
 ### 1,000 items
 
@@ -60,3 +60,29 @@ The folloing shows the memory allocated, and final bytes held:
 | generational cache |  329 ms | 24,726,088 | 12,978,060 | 25.96 |
 | Bit-Pseudo Lru |  323 ms | 26,092,824 | 13,540,636 | 27.08 |
 | System.Runtime.Caching | 1,734 ms | 126,253,192 | 113,435,316 | 226.87 |
+
+# Performance 
+
+### 10,000 items
+
+| Test | Items added | Elapsed | Bytes allocated | Bytes held | Bytes held per key |
+| ---- | ---------- | ------- | --------------- | ---------- | ------------------ |
+| Bit-Pseudo Lru 50% limit | 10000 | 18 ms | 5000 | 2,857,384 | 171,860 | 17.19 |
+| Generational cache 25% Gen0 Limit | 10000 | 7 ms | 5000 | 3,136,336 | 162,220 | 16.22 |
+| Generational cache 150ms half-life | 10000 | 6 ms | 10000 | 3,201,452 | 351,232 | 35.12 |
+
+### 100,000 items
+
+| Test | Items added | Elapsed | Bytes allocated | Bytes held | Bytes held per key |
+| ---- | ---------- | ------- | --------------- | ---------- | ------------------ |
+| Bit-Pseudo Lru 50% limit | 100000 | 154 ms | 50000 | 5,986,956 | 1,518,212 | 1.18 |
+| Generational cache 25% Gen0 Limit | 100000 | 74 ms | 50000 | 6,730,068 | 1,454,388 | 1.54 |
+| Generational cache 150ms half-life | 100000 | 75 ms |  100000 | 6,637,168 | 3,129,592 | 31.30 |
+
+### 500,000 items
+
+| Test | Items added | Elapsed | Items in cache | Bytes allocated | Bytes held | Bytes held per key |
+| ---- | ----------- | ------- | -------------- | --------------- | ---------- | ------------------ |
+| Bit-Pseudo Lru 50% limit | 500000 | 2,012 ms | 250,000 | 12,388,120 | 6,529,544 | 13.06 |
+| Generational cache 25% Gen0 Limit | 200000 | 343 ms | 250,000 | 15,410,916 | 6,257,580 | 15.0 |
+| Generational cache 150ms half-life | 500000 | 332 ms | 263,287 | 16,740,424 | 7,998,580 | 12.52 |
