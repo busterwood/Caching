@@ -38,6 +38,7 @@
     <Reference Include="System.Runtime.Caching" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="BitPseudoLruMap.cs" />
     <Compile Include="GenerationMapTests.cs" />
     <Compile Include="MemoryOverheadTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

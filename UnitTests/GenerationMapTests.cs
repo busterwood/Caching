@@ -15,14 +15,14 @@ namespace UnitTests
         [TestCase(2)]
         public void can_read_item_from_underlying_cache(int key)
         {
-            var cache = new GenerationalMap<int, int>(new ValueIsKey<int, int>(), 3);
+            var cache = new GenerationalMap<int, int>(new ValueIsKey<int, int>(), 3, null);
             Assert.AreEqual(key, cache.Get(key));
         }
 
         [Test]
         public void moves_items_to_gen1_when_gen0_is_full()
         {
-            var cache = new GenerationalMap<int, int>(new ValueIsKey<int, int>(), 3);
+            var cache = new GenerationalMap<int, int>(new ValueIsKey<int, int>(), 3, null);
             for(int i = 1; i <= 4; i++)
             {
                 Assert.AreEqual(i, cache.Get(i));
@@ -34,7 +34,7 @@ namespace UnitTests
         [Test]
         public void drops_items_in_gen1_when_gen0_is_full()
         {
-            var cache = new GenerationalMap<int, int>(new ValueIsKey<int, int>(), 3);
+            var cache = new GenerationalMap<int, int>(new ValueIsKey<int, int>(), 3, null);
             for(int i = 1; i <= 7; i++)
             {
                 Assert.AreEqual(i, cache.Get(i));

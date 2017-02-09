@@ -14,9 +14,9 @@ namespace UnitTests
     {
         ValueIsKey<string, string> valueIsKey = new ValueIsKey<string, string>();
 
-        [TestCase(1000)]
         [TestCase(10000)]
         [TestCase(100000)]
+        [TestCase(200000)]
         public void BitPseudoLru_cache_half(int items)
         {
             var sw = new Stopwatch();
@@ -36,16 +36,16 @@ namespace UnitTests
             GC.KeepAlive(keys);
         }
 
-        [TestCase(1000)]
         [TestCase(10000)]
         [TestCase(100000)]
+        [TestCase(200000)]
         public void generational_cache_half(int items)
         {
             var sw = new Stopwatch();
             string[] keys = CreateKeyStrings(items);
             var starting = GC.GetTotalMemory(true);
             sw.Start();
-            var cache = new GenerationalMap<string, string>(valueIsKey, items / 4);
+            var cache = new GenerationalMap<string, string>(valueIsKey, items / 4, null);
             foreach (var key in keys)
             {
                 Assert.AreEqual(key, cache.Get(key));
@@ -92,7 +92,7 @@ namespace UnitTests
             string[] keys = CreateKeyStrings(items);
             var starting = GC.GetTotalMemory(true);
             sw.Start();
-            var cache = new GenerationalMap<string, string>(valueIsKey, items / 2);
+            var cache = new GenerationalMap<string, string>(valueIsKey, items / 2, null);
             foreach (var key in keys)
             {
                 Assert.AreEqual(key, cache.Get(key));
@@ -103,6 +103,30 @@ namespace UnitTests
             Console.WriteLine($"Took {sw.ElapsedMilliseconds:N0} ms, {items} added to cache, {cache._gen0.Count + cache._gen1.Count} item in the cache, allocated {allocated:N0} bytes, holding {held:N0} bytes, overhead per item {held / (double)items:N2} bytes");
             GC.KeepAlive(cache);
             GC.KeepAlive(keys);
+        }
+
+        [TestCase(1000)]
+        [TestCase(10000)]
+        [TestCase(100000)]
+        [TestCase(500000)]
+        public void time_generational_cache_memory_overhead(int items)
+        {
+            var sw = new Stopwatch();
+            string[] keys = CreateKeyStrings(items);
+            var starting = GC.GetTotalMemory(true);
+            sw.Start();
+            var cache = new GenerationalMap<string, string>(valueIsKey, null, TimeSpan.FromMilliseconds(150));
+            foreach (var key in keys)
+            {
+                Assert.AreEqual(key, cache.Get(key));
+            }
+            sw.Stop();
+            var allocated = GC.GetTotalMemory(false) - starting;
+            var held = GC.GetTotalMemory(true) - starting;
+            Console.WriteLine($"Took {sw.ElapsedMilliseconds:N0} ms, {items} added to cache, {cache._gen0.Count + (cache._gen1?.Count).GetValueOrDefault()} item in the cache, allocated {allocated:N0} bytes, holding {held:N0} bytes, overhead per item {held / (double)items:N2} bytes");
+            GC.KeepAlive(cache);
+            GC.KeepAlive(keys);
+            cache.Dispose(); // stop the underlying task
         }
 
         [TestCase(1000)]
