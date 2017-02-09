@@ -31,30 +31,30 @@ One or both parameters neeed to be set, i.e.
 
 | Test | Iterations | Elapsed | Bytes allocated | Bytes held | Bytes held per key |
 | ---- | ---------- | ------- | --------------- | ---------- | ------------------ |
+| Generic Dictionary | 1000| 0 ms | 78,416 | 38,692 | 38.69 |
+| ConcurrentDictionary | 1000| 0 ms | 133,400 | 1,160,272 | 1,160.27 |
 | generational cache | 1000 | 0 ms | 324,368 | 37,020 | 37.02 |
 | Bit-Pseudo Lru | 1000 | 0 ms | 332,368 | 39,020 | 39.02 |
 | System.Runtime.Caching | 1000| 20 ms | 557,084 | 361,192 | 361.19 |
-| Generic Dictionary | 1000| 0 ms | 78,416 | 38,692 | 38.69 |
-| ConcurrentDictionary | 1000| 0 ms | 133,400 | 1,160,272 | 1,160.27 |
 
 
 ## 100,000 items
 
 | Test | Iterations | Elapsed | Bytes allocated | Bytes held | Bytes held per key |
 | ---- | ---------- | ------- | --------------- | ---------- | ------------------ |
+| Generic Dictionary | 100000| 10 ms | 6,042,836 | 3,128,816 | 31.29 |
+| ConcurrentDictionary | 100000| 17 ms | 5,738,268 | 2,994,008 | 29.94 |
 | generational cache | 100000 | 79 ms | 8,092,948 | 3,017,508 | 30.18 |
 | Bit-Pseudo Lru | 100000 | 87 ms | 6,706,612 | 3,148,456 | 31.48 |
 | System.Runtime.Caching | 100000| 274 ms | 22,603,416 | 21,616,504 | 216.17 |
-| Generic Dictionary | 100000| 10 ms | 6,042,836 | 3,128,816 | 31.29 |
-| ConcurrentDictionary | 100000| 17 ms | 5,738,268 | 2,994,008 | 29.94 |
 
 
 ## 500,000 items
 
 | Test | Iterations | Elapsed | Bytes allocated | Bytes held | Bytes held per key |
 | ---- | ---------- | ------- | --------------- | ---------- | ------------------ |
+| Generic Dictionary | 500000| 67 ms | 25,988,460 | 13,456,616 | 26.91 |
+| ConcurrentDictionary | 500000| 256 ms | 38,744,308 | 16,608,088 | 33.22 |
 | generational cache | 500000 | 329 ms | 24,726,088 | 12,978,060 | 25.96 |
 | Bit-Pseudo Lru | 500000 | 323 ms | 26,092,824 | 13,540,636 | 27.08 |
 | System.Runtime.Caching | 500000| 1,734 ms | 126,253,192 | 113,435,316 | 226.87 |
-| Generic Dictionary | 500000| 67 ms | 25,988,460 | 13,456,616 | 26.91 |
-| ConcurrentDictionary | 500000| 256 ms | 38,744,308 | 16,608,088 | 33.22 |
