@@ -32,7 +32,6 @@ One or both parameters neeed to be set, i.e.
 | Test | Iterations | Elapsed | Bytes allocated | Bytes held | Bytes held per key |
 | ---- | ---------- | ------- | --------------- | ---------- | ------------------ |
 | generational cache | 1000 | 0 ms | 324,368 | 37,020 | 37.02 |
-| generational cache | 500000 | 329 ms | 24,726,088 | 12,978,060 | 25.96 |
 | Bit-Pseudo Lru | 1000 | 0 ms | 332,368 | 39,020 | 39.02 |
 | System.Runtime.Caching | 1000| 20 ms | 557,084 | 361,192 | 361.19 |
 | Generic Dictionary | 1000| 0 ms | 78,416 | 38,692 | 38.69 |
