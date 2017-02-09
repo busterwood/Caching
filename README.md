@@ -25,9 +25,11 @@ One or both parameters neeed to be set, i.e.
 * you can just specify a `halfLife` and let the cache grow to any size, just collection at regular intervals
 * you can specify both `gen0Limit` and `halfLife` to combine the attributes of both
 
-# Benchmarks
+# Memory Overhead
 
-## 1,000 items
+The folloing shows the memory allocated, and final bytes held:
+
+### 1,000 items
 
 | Test | Elapsed | Bytes allocated | Bytes held | Bytes held per key |
 | ---- | ------- | --------------- | ---------- | ------------------ |
@@ -38,7 +40,7 @@ One or both parameters neeed to be set, i.e.
 | System.Runtime.Caching | 20 ms | 557,084 | 361,192 | 361.19 |
 
 
-## 100,000 items
+### 100,000 items
 
 | Test | Elapsed | Bytes allocated | Bytes held | Bytes held per key |
 | ---- | ------- | --------------- | ---------- | ------------------ |
@@ -49,7 +51,7 @@ One or both parameters neeed to be set, i.e.
 | System.Runtime.Caching | 274 ms | 22,603,416 | 21,616,504 | 216.17 |
 
 
-## 500,000 items
+### 500,000 items
 
 | Test | Elapsed | Bytes allocated | Bytes held | Bytes held per key |
 | ---- | ------- | --------------- | ---------- | ------------------ |
