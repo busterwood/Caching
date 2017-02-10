@@ -6,6 +6,8 @@ namespace BusterWood.Caching
     /// <summary>A key to single value cache interface</summary>
     public interface ICache<TKey, TValue>
     {
+        int Count { get; }
+
         /// <summary>Tries to get a value for a key</summary>
         /// <param name="key">The key to find</param>
         /// <returns>The value found, or default(T) if not found</returns>

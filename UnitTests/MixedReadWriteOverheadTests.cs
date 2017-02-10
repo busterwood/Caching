@@ -23,7 +23,7 @@ namespace UnitTests
             ReadMixKeys(keys, cache);
 
             pm.Stop();
-            Console.WriteLine(pm.Report(items));
+            Console.WriteLine(pm.Report(items, cache.Count));
             GC.KeepAlive(cache);
             GC.KeepAlive(keys);
         }
@@ -38,9 +38,9 @@ namespace UnitTests
 
             var cache = new GenerationalMap<string, string>(valueIsKey, items / 4, null);
             ReadMixKeys(keys, cache);
-
+            cache.Dispose();
             pm.Stop();
-            Console.WriteLine(pm.Report(items));
+            Console.WriteLine(pm.Report(items, cache.Count));
             GC.KeepAlive(cache);
             GC.KeepAlive(keys);
         }
@@ -55,9 +55,9 @@ namespace UnitTests
 
             var cache = new GenerationalMap<string, string>(valueIsKey, null, TimeSpan.FromMilliseconds(100));
             ReadMixKeys(keys, cache);
-
+            cache.Dispose();
             pm.Stop();
-            Console.WriteLine(pm.Report(items));
+            Console.WriteLine(pm.Report(items, cache.Count));
             GC.KeepAlive(cache);
             GC.KeepAlive(keys);
         }
@@ -95,18 +95,10 @@ namespace UnitTests
             var pm = new PerformaceMonitor(start: true);
 
             var cache = new ConcurrentDictionary<string, string>();
-            foreach (var key in keys)
-            {
-                string got;
-                if (!cache.TryGetValue(key, out got))
-                {
-                    got = valueIsKey.Get(key);
-                    cache.TryAdd(key, key);
-                }
-            }
-
+            ReadMixKeys(keys, cache);
+            
             pm.Stop();
-            Console.WriteLine(pm.Report(items));
+            Console.WriteLine(pm.Report(items, cache.Count));
             GC.KeepAlive(cache);
             GC.KeepAlive(keys);
         }

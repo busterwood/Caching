@@ -48,6 +48,23 @@ namespace BusterWood.Caching
                 _periodicCollect = PeriodicCollection(halfLife.Value);
         }
 
+        public int Count
+        {
+            get
+            {
+                _lock.Wait();
+                try
+                {
+                    return _gen0.Count + (_gen1?.Count).GetValueOrDefault();
+                }
+                finally
+                {
+                    _lock.Release();
+                }
+            }
+        }
+
+
         /// <summary>Tries to get a value from this cache, or load it from the underlying cache</summary>
         /// <param name="key">The key to find</param>
         /// <returns>The value found, or default(T) if not found</returns>
@@ -145,7 +162,8 @@ namespace BusterWood.Caching
             // don't create a new dictionary if both are empty
             if (_gen0.Count == 0 && (_gen1?.Count).GetValueOrDefault() == 0)
                 return;
-
+            if (_stop)
+                return;
             _gen1 = _gen0; // Gen1 items are dropped from the cache at this point
             _gen0 = new Dictionary<TKey, TValue>(); // Gen0 is now empty, we choose not to re-use Gen1 dictionary so the memory can be GC'd
             _lastCollection = DateTime.UtcNow;

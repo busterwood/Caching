@@ -48,6 +48,14 @@ namespace UnitTests
     class ValueIsKey<TKey, TValue> : ICache<TKey, TValue>
         where TValue : TKey
     {
+        public int Count
+        {
+            get
+            {
+                throw new NotImplementedException();
+            }
+        }
+
         public TValue Get(TKey key) => (TValue)key;
 
         public bool TryGet(TKey key, out TValue value)

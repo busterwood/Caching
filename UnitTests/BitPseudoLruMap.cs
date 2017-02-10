@@ -40,7 +40,7 @@ namespace BusterWood.Caching
             comparer = EqualityComparer<TKey>.Default;
         }
 
-        internal int Count => count;
+        public int Count => count;
 
         public TValue Get(TKey key)
         {

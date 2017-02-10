@@ -31,9 +31,9 @@ namespace UnitTests
             held = GC.GetTotalMemory(true) - starting;
         }
 
-        public string Report(int items)
+        public string Report(int reads, int inCache)
         {
-            return ($"Took {sw.ElapsedMilliseconds:N0} ms, {items} added to cache, allocated {allocated:N0} bytes, holding {held:N0} bytes, overhead per item {held / (double)items:N2} bytes");
+            return ($"Took {sw.ElapsedMilliseconds:N0} ms, {reads} reads, {inCache} items remain in the cache, allocated {allocated:N0} bytes, holding {held:N0} bytes, overhead per item {held / (double)inCache:N2} bytes");
         }
     }
 }
