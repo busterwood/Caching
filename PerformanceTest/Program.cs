@@ -12,7 +12,7 @@ namespace PerformanceTest
     {
         static void Main(string[] args)
         {
-            var tests = new MemoryOverheadTests();
+            var tests = new MixedReadWriteOverheadTests();
             foreach (var method in tests.GetType().GetMethods())
             {
                 foreach(var attr in method.GetCustomAttributes(false).OfType<TestCaseAttribute>())

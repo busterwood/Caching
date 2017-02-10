@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 namespace UnitTests
 {
     [TestFixture]
-    public class MemoryOverheadTests
+    public class WriteOnlyOverheadTests
     {
         ValueIsKey<string, string> valueIsKey = new ValueIsKey<string, string>();
 
