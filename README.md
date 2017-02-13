@@ -32,15 +32,15 @@ The following tests compare a generation cache with a Bit-Pseduo LRU cache.
 ### 4 threads reading-through a total of 100,000 items
 | Test | Elapsed | Items in cache | Bytes allocated | Bytes held | Bytes held per key |
 | ---- | ------- | -------------- | --------------- | ---------- | ------------------ |
-| BitPseudoLru 50% | 118 ms | 50000 | 2,973,144 | 1,519,864 | 30.40 |
-| Generational 25% Gen0 Limit| 34 ms | 33332 | 3,782,700 | 895,764 | 26.87 |
-| Generational 100ms Half-life | 25 ms | 100000 | 6,050,996 | 3,129,228 | 31.29 |
-| concurrent_dictionary_memory_overhead | 11 ms | 100000 | 5,651,692 | 2,994,008 | 29.94 |
+| BitPseudoLru 50% | 118 ms | 50,000 | 2,973,144 | 1,519,864 | 30.40 |
+| Generational 25% Gen0 Limit| 34 ms | 33,332 | 3,782,700 | 895,764 | 26.87 |
+| Generational 100ms Half-life | 25 ms | 100,000 | 6,050,996 | 3,129,228 | 31.29 |
+| concurrent_dictionary_memory_overhead | 11 ms | 100,000 | 5,651,692 | 2,994,008 | 29.94 |
 
 ### 4 threads reading-through a total of 500,000 items
 | Test | Elapsed | Items in cache | Bytes allocated | Bytes held | Bytes held per key |
 | ---- | ------- | -------------- | --------------- | ---------- | ------------------ |
-| BitPseudoLru 50% | 2,062 ms | 250000 | 9,686,520 | 6,529,452 | 26.12 |
-| Generational 25% Gen0 Limit | 183 ms | 166664 | 11,926,556 | 4,637,388 | 27.82 |
-| Generational 100ms Half-life | 159 ms | 331819 | 31,131,248 | 9,617,896 | 28.99 |
-| concurrent_dictionary_memory_overhead | 205 ms | 500000 | 37,960,620 | 16,607,692 | 33.22 |
+| BitPseudoLru 50% | 2,062 ms | 250,000 | 9,686,520 | 6,529,452 | 26.12 |
+| Generational 25% Gen0 Limit | 183 ms | 166,664 | 11,926,556 | 4,637,388 | 27.82 |
+| Generational 100ms Half-life | 159 ms | 331,819 | 31,131,248 | 9,617,896 | 28.99 |
+| concurrent_dictionary_memory_overhead | 205 ms | 500,000 | 37,960,620 | 16,607,692 | 33.22 |
