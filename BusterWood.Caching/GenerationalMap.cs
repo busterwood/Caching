@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Threading;
 using System.Threading.Tasks;
 
 namespace BusterWood.Caching
@@ -14,12 +13,13 @@ namespace BusterWood.Caching
     /// </summary>
     public class GenerationalMap<TKey, TValue> : ICache<TKey, TValue>, IDisposable
     {
+        readonly object _lock; 
         readonly ICache<TKey, TValue> _dataSource;
-        readonly object _lock; // the only lock that support "WaitAsync()"
+        readonly IEqualityComparer<TValue> _valueComparer;
         internal Dictionary<TKey, TValue> _gen0;
         internal Dictionary<TKey, TValue> _gen1;
-        readonly IEqualityComparer<TValue> _valueComparer;
-        readonly Task _periodicCollect;        
+        readonly Task _periodicCollect;
+        readonly InvalidatedHandler<TKey> _invalidated;
         volatile bool _stop;    // stop the periodic collection
         DateTime _lastCollection; // stops a periodic collection running if a size limit collection as happened since the last periodic GC
         int _version;   // used to detect other threads modifying the cache
@@ -42,15 +42,16 @@ namespace BusterWood.Caching
             if (halfLife != null && halfLife < TimeSpan.Zero)
                 throw new ArgumentOutOfRangeException(nameof(halfLife), "Value must be greater than zero");
 
+            _lock = new object();
             _dataSource = dataSource;
             _valueComparer = EqualityComparer<TValue>.Default;
             _gen0 = new Dictionary<TKey, TValue>();
             Gen0Limit = gen0Limit;
             HalfLife = halfLife;
-            _lock = new object();
             if (halfLife != null)
                 _periodicCollect = PeriodicCollection(halfLife.Value);
-            _dataSource.Invalidated += dataSource_Invalidated;
+            _invalidated = dataSource_Invalidated;
+            _dataSource.Invalidated += _invalidated;
         }
 
         void dataSource_Invalidated(object sender, TKey key)
@@ -216,6 +217,7 @@ namespace BusterWood.Caching
         public void Dispose()
         {
             _stop = true;
+            _dataSource.Invalidated -= _invalidated;
         }
 
         /// <summary>Tries to get the values associated with the <paramref name="keys" /></summary>
