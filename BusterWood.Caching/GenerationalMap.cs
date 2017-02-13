@@ -63,15 +63,10 @@ namespace BusterWood.Caching
         {
             get
             {
-                Monitor.Enter(_lock);
-                try
+                lock(_lock)
                 {
                     return _gen0.Count + (_gen1?.Count).GetValueOrDefault();
-                }
-                finally
-                {
-                    Monitor.Exit(_lock);
-                }
+                }                
             }
         }
 
@@ -93,8 +88,7 @@ namespace BusterWood.Caching
         public bool TryGet(TKey key, out TValue value)
         {
             int start;
-            Monitor.Enter(_lock);
-            try
+            lock(_lock)
             {
                 start = _version;
                 if (_gen0.TryGetValue(key, out value))
@@ -105,19 +99,13 @@ namespace BusterWood.Caching
                     PromoteGen1ToGen0(key, value);
                     return true;
                 }
-            }
-            finally
-            {
-                Monitor.Exit(_lock);
-            }
-
+            }            
             // key not found by this point, read-through to the data source *outside* of the lock as this may take some time, i.e. network or file access
             TValue dsValue;
             if (!_dataSource.TryGet(key, out dsValue))
                 return false;
 
-            Monitor.Enter(_lock);
-            try
+            lock(_lock)
             {
                 if (_version != start)
                 {
@@ -141,11 +129,7 @@ namespace BusterWood.Caching
                 value = dsValue;
                 unchecked { _version++; }
                 return true;
-            }
-            finally
-            {
-                Monitor.Exit(_lock);
-            }
+            }            
         }
 
         bool Gen0LimitReached() => _gen0.Count >= Gen0Limit;
@@ -163,8 +147,7 @@ namespace BusterWood.Caching
         {
             int start;
             TValue value;
-            Monitor.Enter(_lock);
-            try
+            lock(_lock)
             {
                 start = _version;
                 if (_gen0.TryGetValue(key, out value))
@@ -175,19 +158,13 @@ namespace BusterWood.Caching
                     PromoteGen1ToGen0(key, value);
                     return value;
                 }
-            }
-            finally
-            {
-                Monitor.Exit(_lock);
-            }
-
+            }            
             // key not found by this point, read-through to the data source *outside* of the lock as this may take some time, i.e. network or file access
             TValue dsValue = await _dataSource.GetAsync(key);
             if (_valueComparer.Equals(default(TValue), dsValue))
                 return default(TValue);
 
-            Monitor.Enter(_lock);
-            try
+            lock(_lock)
             {
                 if (_version != start)
                 {
@@ -211,24 +188,15 @@ namespace BusterWood.Caching
                 value = dsValue;
                 unchecked { _version++; }
                 return value;
-            }
-            finally
-            {
-                Monitor.Exit(_lock);
-            }
+            }            
         }
 
         internal void ForceCollect()
         {
-            Monitor.Enter(_lock);
-            try
+            lock(_lock)
             {
                 Collect();
-            }
-            finally
-            {
-                Monitor.Exit(_lock);
-            }
+            }            
         }
 
         void Collect()
@@ -251,19 +219,14 @@ namespace BusterWood.Caching
                 if (_stop)
                     break;
 
-                Monitor.Enter(_lock);
-                try
+                lock(_lock)
                 {
                     if (_stop)
                         break;
 
                     if (_lastCollection <= DateTime.UtcNow - period)
                         Collect();
-                }
-                finally
-                {
-                    Monitor.Exit(_lock);
-                }
+                }                
             }
         }
 
@@ -277,8 +240,7 @@ namespace BusterWood.Caching
         /// <returns>An array the same size as the input <paramref name="keys" /> that contains a value or default(T) for each key in the corresponding index</returns>
         public TValue[] GetBatch(IReadOnlyCollection<TKey> keys)
         {
-            Monitor.Enter(_lock);
-            try
+            lock(_lock)
             {
                 var results = new TValue[keys.Count];
                 var missedKeys = new List<TKey>();
@@ -322,11 +284,7 @@ namespace BusterWood.Caching
                 }
 
                 return results;
-            }
-            finally
-            {
-                Monitor.Exit(_lock);
-            }
+            }            
         }
 
         /// <summary>Tries to get the values associated with the <paramref name="keys" /></summary>
@@ -334,12 +292,11 @@ namespace BusterWood.Caching
         /// <returns>An array the same size as the input <paramref name="keys" /> that contains a value or default(T) for each key in the corresponding index</returns>
         public async Task<TValue[]> GetBatchAsync(IReadOnlyCollection<TKey> keys)
         {
-            Monitor.Enter(_lock);
-            try
+            TValue[] results = new TValue[keys.Count];
+            List<TKey> missedKeys = new List<TKey>();
+            List<int> missedKeyIdx = new List<int>();
+            lock (_lock)
             {
-                var results = new TValue[keys.Count];
-                var missedKeys = new List<TKey>();
-                var missedKeyIdx = new List<int>();
                 int i = 0;
                 foreach (var key in keys)
                 {
@@ -361,10 +318,14 @@ namespace BusterWood.Caching
                     }
                     i++;
                 }
+            }
 
+            var loaded = await _dataSource.GetBatchAsync(missedKeys);
+
+            lock(_lock)
+            {
                 if (missedKeys.Count > 0)
                 {
-                    var loaded = await _dataSource.GetBatchAsync(missedKeys);
                     if (_gen0.Count + loaded.Length > Gen0Limit)
                         Collect();
 
@@ -379,67 +340,43 @@ namespace BusterWood.Caching
                 }
 
                 return results;
-            }
-            finally
-            {
-                Monitor.Exit(_lock);
-            }
+            }            
         }
 
         /// <summary>Removes a <param name="key" /> (and value) from the cache, if it exists.</summary>
         public void Invalidate(TKey key)
         {
-            Monitor.Enter(_lock);
-            try
+            lock(_lock)
             {
                 InvalidateKey(key);
-            }
-            finally
-            {
-                Monitor.Exit(_lock);
-            }
+            }            
         }
 
         /// <summary>Removes a <param name="key" /> (and value) from the cache, if it exists.</summary>
         public async Task InvalidateAsync(TKey key)
         {
-            Monitor.Enter(_lock);
-            try
+            lock(_lock)
             {
                 InvalidateKey(key);
-            }
-            finally
-            {
-                Monitor.Exit(_lock);
-            }
+            }            
         }
 
         /// <summary>Removes a a number of <paramref name="keys" /> (and value) from the cache, if it exists.</summary>
         public void Invalidate(IEnumerable<TKey> keys)
         {
-            Monitor.Enter(_lock);
-            try
+            lock(_lock)
             {
                 InvalidateKeys(keys);
-            }
-            finally
-            {
-                Monitor.Exit(_lock);
             }
         }
 
         /// <summary>Removes a a number of <paramref name="keys" /> (and value) from the cache, if it exists.</summary>
         public async Task InvalidateAsync(IEnumerable<TKey> keys)
         {
-            Monitor.Enter(_lock);
-            try
+            lock(_lock)
             {
                 InvalidateKeys(keys);
-            }
-            finally
-            {
-                Monitor.Exit(_lock);
-            }
+            }            
         }
 
         void InvalidateKeys(IEnumerable<TKey> keys)
