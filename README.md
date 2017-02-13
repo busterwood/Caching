@@ -65,26 +65,18 @@ The following shows the memory allocated and final bytes held for adding a numbe
 
 The following tests compare a generation cache with a Bit-Pseduo LRU cache.
 
-### 10,000 items added
-
+### 4 threads reading-through a total of 100,000 items
 | Test | Elapsed | Items in cache | Bytes allocated | Bytes held | Bytes held per key |
 | ---- | ------- | -------------- | --------------- | ---------- | ------------------ |
-| Bit-Pseudo Lru 50% limit | 18 ms | 5000 | 2,857,384 | 171,860 | 17.19 |
-| Generational cache 25% Gen0 Limit | 7 ms | 5000 | 3,136,336 | 162,220 | 16.22 |
-| Generational cache 150ms half-life | 6 ms | 10000 | 3,201,452 | 351,232 | 35.12 |
+| BitPseudoLru 50% | 118 ms | 50000 | 2,973,144 | 1,519,864 | 30.40 |
+| Generational 25% Gen0 Limit| 34 ms | 33332 | 3,782,700 | 895,764 | 26.87 |
+| Generational 100ms Half-life | 25 ms | 100000 | 6,050,996 | 3,129,228 | 31.29 |
+| concurrent_dictionary_memory_overhead | 11 ms | 100000 | 5,651,692 | 2,994,008 | 29.94 |
 
-### 100,000 items added
-
+### 4 threads reading-through a total of 500,000 items
 | Test | Elapsed | Items in cache | Bytes allocated | Bytes held | Bytes held per key |
 | ---- | ------- | -------------- | --------------- | ---------- | ------------------ |
-| Bit-Pseudo Lru 50% limit | 154 ms | 50000 | 5,986,956 | 1,518,212 | 1.18 |
-| Generational cache 25% Gen0 Limit | 74 ms | 50000 | 6,730,068 | 1,454,388 | 1.54 |
-| Generational cache 150ms half-life | 75 ms |  100000 | 6,637,168 | 3,129,592 | 31.30 |
-
-### 500,000 items added
-
-| Test | Elapsed | Items in cache | Bytes allocated | Bytes held | Bytes held per key |
-| ---- | ------- | -------------- | --------------- | ---------- | ------------------ |
-| Bit-Pseudo Lru 50% limit | 2,012 ms | 250,000 | 12,388,120 | 6,529,544 | 13.06 |
-| Generational cache 25% Gen0 Limit | 343 ms | 250,000 | 15,410,916 | 6,257,580 | 15.0 |
-| Generational cache 150ms half-life | 332 ms | 263,287 | 16,740,424 | 7,998,580 | 12.52 |
+| BitPseudoLru 50% | 2,062 ms | 250000 | 9,686,520 | 6,529,452 | 26.12 |
+| Generational 25% Gen0 Limit | 183 ms | 166664 | 11,926,556 | 4,637,388 | 27.82 |
+| Generational 100ms Half-life | 159 ms | 331819 | 31,131,248 | 9,617,896 | 28.99 |
+| concurrent_dictionary_memory_overhead | 205 ms | 500000 | 37,960,620 | 16,607,692 | 33.22 |
