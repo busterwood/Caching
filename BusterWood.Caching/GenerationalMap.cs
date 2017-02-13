@@ -16,7 +16,7 @@ namespace BusterWood.Caching
     {
         
         readonly ICache<TKey, TValue> _dataSource;
-        readonly SemaphoreSlim _lock; // the only lock that support "WaitAsync()"
+        readonly object _lock; // the only lock that support "WaitAsync()"
         internal Dictionary<TKey, TValue> _gen0;
         internal Dictionary<TKey, TValue> _gen1;
         readonly IEqualityComparer<TValue> _valueComparer;
@@ -63,14 +63,14 @@ namespace BusterWood.Caching
         {
             get
             {
-                _lock.Wait();
+                Monitor.Enter(_lock);
                 try
                 {
                     return _gen0.Count + (_gen1?.Count).GetValueOrDefault();
                 }
                 finally
                 {
-                    _lock.Release();
+                    Monitor.Exit(_lock);
                 }
             }
         }
@@ -93,7 +93,7 @@ namespace BusterWood.Caching
         public bool TryGet(TKey key, out TValue value)
         {
             int start;
-            _lock.Wait();
+            Monitor.Enter(_lock);
             try
             {
                 start = _version;
@@ -108,7 +108,7 @@ namespace BusterWood.Caching
             }
             finally
             {
-                _lock.Release();
+                Monitor.Exit(_lock);
             }
 
             // key not found by this point, read-through to the data source *outside* of the lock as this may take some time, i.e. network or file access
@@ -116,7 +116,7 @@ namespace BusterWood.Caching
             if (!_dataSource.TryGet(key, out dsValue))
                 return false;
 
-            _lock.Wait();
+            Monitor.Enter(_lock);
             try
             {
                 if (_version != start)
@@ -144,7 +144,7 @@ namespace BusterWood.Caching
             }
             finally
             {
-                _lock.Release();
+                Monitor.Exit(_lock);
             }
         }
 
@@ -163,7 +163,7 @@ namespace BusterWood.Caching
         {
             int start;
             TValue value;
-            await _lock.WaitAsync();
+            Monitor.Enter(_lock);
             try
             {
                 start = _version;
@@ -178,7 +178,7 @@ namespace BusterWood.Caching
             }
             finally
             {
-                _lock.Release();
+                Monitor.Exit(_lock);
             }
 
             // key not found by this point, read-through to the data source *outside* of the lock as this may take some time, i.e. network or file access
@@ -186,7 +186,7 @@ namespace BusterWood.Caching
             if (_valueComparer.Equals(default(TValue), dsValue))
                 return default(TValue);
 
-            await _lock.WaitAsync();
+            Monitor.Enter(_lock);
             try
             {
                 if (_version != start)
@@ -214,20 +214,20 @@ namespace BusterWood.Caching
             }
             finally
             {
-                _lock.Release();
+                Monitor.Exit(_lock);
             }
         }
 
         internal void ForceCollect()
         {
-            _lock.Wait();
+            Monitor.Enter(_lock);
             try
             {
                 Collect();
             }
             finally
             {
-                _lock.Release();
+                Monitor.Exit(_lock);
             }
         }
 
@@ -251,7 +251,7 @@ namespace BusterWood.Caching
                 if (_stop)
                     break;
 
-                await _lock.WaitAsync();
+                Monitor.Enter(_lock);
                 try
                 {
                     if (_stop)
@@ -262,7 +262,7 @@ namespace BusterWood.Caching
                 }
                 finally
                 {
-                    _lock.Release();
+                    Monitor.Exit(_lock);
                 }
             }
         }
@@ -277,7 +277,7 @@ namespace BusterWood.Caching
         /// <returns>An array the same size as the input <paramref name="keys" /> that contains a value or default(T) for each key in the corresponding index</returns>
         public TValue[] GetBatch(IReadOnlyCollection<TKey> keys)
         {
-            _lock.Wait();
+            Monitor.Enter(_lock);
             try
             {
                 var results = new TValue[keys.Count];
@@ -325,7 +325,7 @@ namespace BusterWood.Caching
             }
             finally
             {
-                _lock.Release();
+                Monitor.Exit(_lock);
             }
         }
 
@@ -334,7 +334,7 @@ namespace BusterWood.Caching
         /// <returns>An array the same size as the input <paramref name="keys" /> that contains a value or default(T) for each key in the corresponding index</returns>
         public async Task<TValue[]> GetBatchAsync(IReadOnlyCollection<TKey> keys)
         {
-            await _lock.WaitAsync();
+            Monitor.Enter(_lock);
             try
             {
                 var results = new TValue[keys.Count];
@@ -382,63 +382,63 @@ namespace BusterWood.Caching
             }
             finally
             {
-                _lock.Release();
+                Monitor.Exit(_lock);
             }
         }
 
         /// <summary>Removes a <param name="key" /> (and value) from the cache, if it exists.</summary>
         public void Invalidate(TKey key)
         {
-            _lock.Wait();
+            Monitor.Enter(_lock);
             try
             {
                 InvalidateKey(key);
             }
             finally
             {
-                _lock.Release();
+                Monitor.Exit(_lock);
             }
         }
 
         /// <summary>Removes a <param name="key" /> (and value) from the cache, if it exists.</summary>
         public async Task InvalidateAsync(TKey key)
         {
-            await _lock.WaitAsync();
+            Monitor.Enter(_lock);
             try
             {
                 InvalidateKey(key);
             }
             finally
             {
-                _lock.Release();
+                Monitor.Exit(_lock);
             }
         }
 
         /// <summary>Removes a a number of <paramref name="keys" /> (and value) from the cache, if it exists.</summary>
         public void Invalidate(IEnumerable<TKey> keys)
         {
-            _lock.Wait();
+            Monitor.Enter(_lock);
             try
             {
                 InvalidateKeys(keys);
             }
             finally
             {
-                _lock.Release();
+                Monitor.Exit(_lock);
             }
         }
 
         /// <summary>Removes a a number of <paramref name="keys" /> (and value) from the cache, if it exists.</summary>
         public async Task InvalidateAsync(IEnumerable<TKey> keys)
         {
-            await _lock.WaitAsync();
+            Monitor.Enter(_lock);
             try
             {
                 InvalidateKeys(keys);
             }
             finally
             {
-                _lock.Release();
+                Monitor.Exit(_lock);
             }
         }
 
