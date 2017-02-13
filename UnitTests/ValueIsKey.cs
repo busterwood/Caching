@@ -1,6 +1,7 @@
 ﻿using BusterWood.Caching;
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace UnitTests
@@ -9,6 +10,8 @@ namespace UnitTests
     class ValueIsKey<TKey, TValue> : ICache<TKey, TValue>
         where TValue : TKey
     {
+        public int SpinWaitCount;
+
         public int Count
         {
             get
@@ -19,10 +22,17 @@ namespace UnitTests
 
         public event InvalidatedHandler<TKey> Invalidated;
 
-        public TValue Get(TKey key) => (TValue)key;
+        public TValue Get(TKey key)
+        {
+            if (SpinWaitCount > 0)
+                Thread.SpinWait(SpinWaitCount);
+            return (TValue)key;
+        }
 
         public bool TryGet(TKey key, out TValue value)
         {
+            if (SpinWaitCount > 0)
+                Thread.SpinWait(SpinWaitCount);
             value = (TValue)key;
             return true;
         }

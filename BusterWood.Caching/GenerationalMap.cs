@@ -48,7 +48,7 @@ namespace BusterWood.Caching
             _gen0 = new Dictionary<TKey, TValue>();
             Gen0Limit = gen0Limit;
             HalfLife = halfLife;
-            _lock = new SemaphoreSlim(1);
+            _lock = new object();
             if (halfLife != null)
                 _periodicCollect = PeriodicCollection(halfLife.Value);
             _dataSource.Invalidated += dataSource_Invalidated;

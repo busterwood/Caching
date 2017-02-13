@@ -9,7 +9,7 @@ namespace UnitTests
     [TestFixture]
     public class MixedReadWriteOverheadTests
     {
-        ValueIsKey<string, string> valueIsKey = new ValueIsKey<string, string>();
+        ValueIsKey<string, string> valueIsKey = new ValueIsKey<string, string> {  };
 
         [TestCase(10000)]
         [TestCase(100000)]
@@ -53,7 +53,7 @@ namespace UnitTests
             string[] keys = CreateKeyStrings(items);
             var pm = new PerformaceMonitor(start: true);
 
-            var cache = new GenerationalMap<string, string>(valueIsKey, null, TimeSpan.FromMilliseconds(300));
+            var cache = new GenerationalMap<string, string>(valueIsKey, null, TimeSpan.FromMilliseconds(50));
             ReadMixKeys(keys, cache);
             cache.Dispose();
             pm.Stop();

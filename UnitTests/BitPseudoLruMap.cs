@@ -10,7 +10,7 @@ namespace BusterWood.Caching
     public class BitPseudoLruMap<TKey, TValue> : ICache<TKey, TValue>
     {
         readonly ICache<TKey, TValue> _nextLevel;
-        readonly SemaphoreSlim _lock;
+        readonly object _lock;
         readonly int _capacity;
         readonly IEqualityComparer<TKey> comparer;
         int[] buckets;
@@ -36,7 +36,7 @@ namespace BusterWood.Caching
                 throw new ArgumentOutOfRangeException(nameof(capacity), "Value must be one or more");
             _nextLevel = nextLevel;
             _capacity = capacity;
-            _lock = new SemaphoreSlim(1);
+            _lock = new object();
             comparer = EqualityComparer<TKey>.Default;
         }
 
@@ -54,8 +54,7 @@ namespace BusterWood.Caching
         /// <returns>The value found, or default(T) if not found</returns>
         public bool TryGet(TKey key, out TValue value)
         {
-            _lock.Wait();
-            try
+            lock (_lock)
             {
                 int i = FindEntry(key);
                 if (i >= 0)
@@ -64,10 +63,14 @@ namespace BusterWood.Caching
                     value = entries[i].value;
                     return true;
                 }
+            }
+            
+            // key not found by this point
+            if (!_nextLevel.TryGet(key, out value)) // NOTE: possible blocking
+                return false; // not found
 
-                // key not found by this point
-                if (!_nextLevel.TryGet(key, out value)) // NOTE: possible blocking
-                    return false; // not found
+            lock(_lock)
+            {
 
                 // about to add, check the limit
                 if (count >= _capacity)
@@ -79,10 +82,6 @@ namespace BusterWood.Caching
                 // a new item in the cache
                 Insert(key, value, false);
                 return true;
-            }
-            finally
-            {
-                _lock.Release();
             }
         }
 
