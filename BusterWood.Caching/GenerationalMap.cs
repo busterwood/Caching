@@ -14,7 +14,6 @@ namespace BusterWood.Caching
     /// </summary>
     public class GenerationalMap<TKey, TValue> : ICache<TKey, TValue>, IDisposable
     {
-        
         readonly ICache<TKey, TValue> _dataSource;
         readonly object _lock; // the only lock that support "WaitAsync()"
         internal Dictionary<TKey, TValue> _gen0;
@@ -23,7 +22,7 @@ namespace BusterWood.Caching
         readonly Task _periodicCollect;        
         volatile bool _stop;    // stop the periodic collection
         DateTime _lastCollection; // stops a periodic collection running if a size limit collection as happened since the last periodic GC
-        int _version;
+        int _version;   // used to detect other threads modifying the cache
 
         public int? Gen0Limit { get; }
         public TimeSpan? HalfLife { get; }
@@ -70,7 +69,6 @@ namespace BusterWood.Caching
             }
         }
 
-
         /// <summary>Tries to get a value from this cache, or load it from the underlying cache</summary>
         /// <param name="key">The key to find</param>
         /// <returns>The value found, or default(T) if not found</returns>
@@ -91,54 +89,59 @@ namespace BusterWood.Caching
             lock(_lock)
             {
                 start = _version;
-                if (_gen0.TryGetValue(key, out value))
+                if (TryGetAnyGen(key, out value))
                     return true;
-
-                if (_gen1?.TryGetValue(key, out value) == true)
-                {
-                    PromoteGen1ToGen0(key, value);
-                    return true;
-                }
             }            
+            
             // key not found by this point, read-through to the data source *outside* of the lock as this may take some time, i.e. network or file access
-            TValue dsValue;
-            if (!_dataSource.TryGet(key, out dsValue))
+            TValue loaded;
+            if (!_dataSource.TryGet(key, out loaded))
                 return false;
 
             lock(_lock)
             {
-                if (_version != start)
-                {
-                    // another thread may have added the value for our key so double-check
-                    if (_gen0.TryGetValue(key, out value))
-                        return true;
+                // another thread may have added the value for our key so double-check
+                if (_version != start && TryGetAnyGen(key, out value))
+                    return true;
 
-                    if (_gen1?.TryGetValue(key, out value) == true)
-                    {
-                        PromoteGen1ToGen0(key, value);
-                        return true;
-                    }
-                }
-
-                // about to add, check the limit
-                if (Gen0LimitReached())
-                    Collect();
-
-                // a new item in the cache
-                _gen0.Add(key, dsValue);
-                value = dsValue;
-                unchecked { _version++; }
+                AddToGen0(key, loaded);
+                value = loaded;
                 return true;
-            }            
+            }
         }
 
-        bool Gen0LimitReached() => _gen0.Count >= Gen0Limit;
+        /// <summary>Gets the <paramref name="value"/> for a <paramref name="key"/> from Gen0 or Gen1</summary>
+        bool TryGetAnyGen(TKey key, out TValue value)
+        {
+            if (_gen0.TryGetValue(key, out value))
+                return true;
+
+            if (_gen1?.TryGetValue(key, out value) == true)
+            {
+                PromoteGen1ToGen0(key, value);
+                return true;
+            }
+            return false;
+        }
 
         void PromoteGen1ToGen0(TKey key, TValue value)
         {
             _gen1.Remove(key);
             _gen0.Add(key, value);
         }
+
+        void AddToGen0(TKey key, TValue loaded)
+        {
+            // about to add, check the limit
+            if (Gen0LimitReached())
+                Collect();
+
+            // a new item in the cache
+            _gen0.Add(key, loaded);
+            unchecked { _version++; }
+        }
+
+        bool Gen0LimitReached() => _gen0.Count >= Gen0Limit;
 
         /// <summary>Tries to get a value from this cache, or load it from the underlying cache</summary>
         /// <param name="key">The key to find</param>
@@ -150,43 +153,23 @@ namespace BusterWood.Caching
             lock(_lock)
             {
                 start = _version;
-                if (_gen0.TryGetValue(key, out value))
+                if (TryGetAnyGen(key, out value))
                     return value;
-
-                if (_gen1?.TryGetValue(key, out value) == true)
-                {
-                    PromoteGen1ToGen0(key, value);
-                    return value;
-                }
-            }            
+            }  
+                      
             // key not found by this point, read-through to the data source *outside* of the lock as this may take some time, i.e. network or file access
-            TValue dsValue = await _dataSource.GetAsync(key);
-            if (_valueComparer.Equals(default(TValue), dsValue))
+            TValue loaded = await _dataSource.GetAsync(key);
+
+            if (_valueComparer.Equals(default(TValue), loaded))
                 return default(TValue);
 
             lock(_lock)
             {
-                if (_version != start)
-                {
-                    // another thread may have added the value for our key so double-check
-                    if (_gen0.TryGetValue(key, out value))
-                        return value;
+                if (_version != start && TryGetAnyGen(key, out value))
+                    return value;
 
-                    if (_gen1?.TryGetValue(key, out value) == true)
-                    {
-                        PromoteGen1ToGen0(key, value);
-                        return value;
-                    }
-                }
-
-                // about to add, check the limit
-                if (Gen0LimitReached())
-                    Collect();
-
-                // a new item in the cache
-                _gen0.Add(key, dsValue);
-                value = dsValue;
-                unchecked { _version++; }
+                AddToGen0(key, loaded);
+                value = loaded;
                 return value;
             }            
         }
@@ -240,51 +223,20 @@ namespace BusterWood.Caching
         /// <returns>An array the same size as the input <paramref name="keys" /> that contains a value or default(T) for each key in the corresponding index</returns>
         public TValue[] GetBatch(IReadOnlyCollection<TKey> keys)
         {
-            lock(_lock)
+            BatchLoad batch;
+            lock (_lock)
             {
-                var results = new TValue[keys.Count];
-                var missedKeys = new List<TKey>();
-                var missedKeyIdx = new List<int>();
-                int i = 0;
-                foreach (var key in keys)
-                {
-                    TValue value;
+                batch = TryGetBatch(keys);
+            }
 
-                    if (_gen0.TryGetValue(key, out value))
-                    {
-                        results[i] = value;
-                    }
-                    else if (_gen1?.TryGetValue(key, out value) == true)
-                    {
-                        PromoteGen1ToGen0(key, value);
-                        results[i] = value;
-                    }
-                    else
-                    {
-                        missedKeys.Add(key);
-                        missedKeyIdx.Add(i);
-                    }
-                    i++;
-                }
+            // we got all the results from the cache
+            if (batch.MissedKeys.Count == 0)
+                return batch.Results;
 
-                if (missedKeys.Count > 0)
-                {
-                    var loaded = _dataSource.GetBatch(missedKeys); // NOTE: possible blocking
-                    if (_gen0.Count + loaded.Length > Gen0Limit)
-                        Collect();
+            // key not found by this point, read-through to the data source *outside* of the lock as this may take some time, i.e. network or file access
+            var dsLoaded = _dataSource.GetBatch(batch.MissedKeys);
 
-                    int k = 0;
-                    foreach (var value in loaded)
-                    {
-                        _gen0.Add(missedKeys[k], value);
-                        var idx = missedKeyIdx[k];
-                        results[idx] = value;
-                        k++;
-                    }
-                }
-
-                return results;
-            }            
+            return UpdateCacheAndResults(batch, dsLoaded);
         }
 
         /// <summary>Tries to get the values associated with the <paramref name="keys" /></summary>
@@ -292,68 +244,91 @@ namespace BusterWood.Caching
         /// <returns>An array the same size as the input <paramref name="keys" /> that contains a value or default(T) for each key in the corresponding index</returns>
         public async Task<TValue[]> GetBatchAsync(IReadOnlyCollection<TKey> keys)
         {
-            TValue[] results = new TValue[keys.Count];
-            List<TKey> missedKeys = new List<TKey>();
-            List<int> missedKeyIdx = new List<int>();
+            BatchLoad batch;
             lock (_lock)
             {
-                int i = 0;
-                foreach (var key in keys)
-                {
-                    TValue value;
-
-                    if (_gen0.TryGetValue(key, out value))
-                    {
-                        results[i] = value;
-                    }
-                    else if (_gen1?.TryGetValue(key, out value) == true)
-                    {
-                        PromoteGen1ToGen0(key, value);
-                        results[i] = value;
-                    }
-                    else
-                    {
-                        missedKeys.Add(key);
-                        missedKeyIdx.Add(i);
-                    }
-                    i++;
-                }
+                batch = TryGetBatch(keys);
             }
 
-            var loaded = await _dataSource.GetBatchAsync(missedKeys);
+            // we got all the results from the cache
+            if (batch.MissedKeys.Count == 0)
+                return batch.Results;
 
-            lock(_lock)
+            // key not found by this point, read-through to the data source *outside* of the lock as this may take some time, i.e. network or file access
+            var loaded = await _dataSource.GetBatchAsync(batch.MissedKeys);
+
+            return UpdateCacheAndResults(batch, loaded);
+        }
+
+        private BatchLoad TryGetBatch(IReadOnlyCollection<TKey> keys)
+        {
+            var batch = new BatchLoad(keys.Count, _version);
+            int i = 0;
+            foreach (var key in keys)
             {
-                if (missedKeys.Count > 0)
+                TValue value;
+                if (TryGetAnyGen(key, out value))
                 {
-                    if (_gen0.Count + loaded.Length > Gen0Limit)
-                        Collect();
-
-                    int k = 0;
-                    foreach (var value in loaded)
-                    {
-                        _gen0.Add(missedKeys[k], value);
-                        var idx = missedKeyIdx[k];
-                        results[idx] = value;
-                        k++;
-                    }
+                    batch.Results[i] = value;
                 }
+                else
+                {
+                    batch.MissedKeys.Add(key);
+                    batch.MissedKeyIdx.Add(i);
+                }
+                i++;
+            }
+            return batch;
+        }
 
-                return results;
-            }            
+        struct BatchLoad
+        {
+            public readonly TValue[] Results;
+            public readonly List<TKey> MissedKeys;
+            public readonly List<int> MissedKeyIdx;
+            public readonly int Version;
+
+            public BatchLoad(int keys, int version)
+            {
+                Version = version;
+                Results = new TValue[keys];
+                MissedKeys = new List<TKey>();
+                MissedKeyIdx = new List<int>();
+            }
+        }
+
+        private TValue[] UpdateCacheAndResults(BatchLoad batch, TValue[] loaded)
+        {
+            lock (_lock)
+            {
+                int k = 0;
+                foreach (var dsValue in loaded)
+                {
+                    if (!_valueComparer.Equals(default(TValue), dsValue))
+                    {
+                        var idx = batch.MissedKeyIdx[k];
+                        TValue cached;
+                        if (batch.Version != _version && TryGetAnyGen(batch.MissedKeys[k], out cached))
+                        {
+                            // another thread loaded our value
+                            batch.Results[idx] = cached;
+                            unchecked { _version++; }
+                        }
+                        else
+                        {
+                            // we loaded the value, store it in the cache
+                            AddToGen0(batch.MissedKeys[k], dsValue);
+                            batch.Results[idx] = dsValue;
+                        }
+                    }
+                    k++;
+                }
+            }
+            return batch.Results;
         }
 
         /// <summary>Removes a <param name="key" /> (and value) from the cache, if it exists.</summary>
         public void Invalidate(TKey key)
-        {
-            lock(_lock)
-            {
-                InvalidateKey(key);
-            }            
-        }
-
-        /// <summary>Removes a <param name="key" /> (and value) from the cache, if it exists.</summary>
-        public async Task InvalidateAsync(TKey key)
         {
             lock(_lock)
             {
@@ -366,26 +341,11 @@ namespace BusterWood.Caching
         {
             lock(_lock)
             {
-                InvalidateKeys(keys);
+                foreach (var key in keys)
+                {
+                    InvalidateKey(key);
+                }
             }
-        }
-
-        /// <summary>Removes a a number of <paramref name="keys" /> (and value) from the cache, if it exists.</summary>
-        public async Task InvalidateAsync(IEnumerable<TKey> keys)
-        {
-            lock(_lock)
-            {
-                InvalidateKeys(keys);
-            }            
-        }
-
-        void InvalidateKeys(IEnumerable<TKey> keys)
-        {
-            foreach (var key in keys)
-            {
-                InvalidateKey(key);
-            }
-            //TODO: batch invalidation event?
         }
 
         void InvalidateKey(TKey key)

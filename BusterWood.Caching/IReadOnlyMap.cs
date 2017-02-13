@@ -40,14 +40,8 @@ namespace BusterWood.Caching
         /// <summary>Removes a <param name="key"/> (and value) from the cache, if it exists.</summary>
         void Invalidate(TKey key);
 
-        /// <summary>Removes a <param name="key"/> (and value) from the cache, if it exists.</summary>
-        Task InvalidateAsync(TKey key);
-
         /// <summary>Removes a a number of <paramref name="keys"/> (and value) from the cache, if it exists.</summary>
         void Invalidate(IEnumerable<TKey> keys);
-
-        /// <summary>Removes a a number of <paramref name="keys"/> (and value) from the cache, if it exists.</summary>
-        Task InvalidateAsync(IEnumerable<TKey> keys);
 
         /// <summary>Allows a consumer to be notified when a entry has been removed from the cache by one of the <see cref="Invalidate(TKey)"/> methods</summary>
         /// <remarks>

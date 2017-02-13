@@ -41,12 +41,18 @@ namespace UnitTests
 
         public TValue[] GetBatch(IReadOnlyCollection<TKey> keys)
         {
-            throw new NotImplementedException();
+            var results = new TValue[keys.Count];
+            int i = 0;
+            foreach (var k in keys)
+            {
+                results[i++] = (TValue)k;
+            }
+            return results;
         }
 
         public Task<TValue[]> GetBatchAsync(IReadOnlyCollection<TKey> keys)
         {
-            throw new NotImplementedException();
+            return Task.FromResult(GetBatch(keys));
         }
 
         public void Invalidate(TKey key)
