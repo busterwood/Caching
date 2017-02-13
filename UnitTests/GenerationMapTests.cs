@@ -1,10 +1,6 @@
 ﻿using BusterWood.Caching;
 using NUnit.Framework;
-using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Runtime.Caching;
-using System.Threading.Tasks;
 
 namespace UnitTests
 {
@@ -43,57 +39,37 @@ namespace UnitTests
             Assert.AreEqual(1, cache._gen0.Count, "gen0.Count");
         }
 
-    }
-
-    class ValueIsKey<TKey, TValue> : ICache<TKey, TValue>
-        where TValue : TKey
-    {
-        public int Count
+        [Test]
+        public void invalidate_removes_item_from_gen0()
         {
-            get
-            {
-                throw new NotImplementedException();
-            }
+            var cache = new GenerationalMap<int, int>(new ValueIsKey<int, int>(), 10, null);
+            Assert.AreEqual(1, cache.Get(1));
+            Assert.AreEqual(1, cache.Count, "Count");
+            cache.Invalidate(1);
+            Assert.AreEqual(0, cache.Count, "Count");
         }
 
-        public TValue Get(TKey key) => (TValue)key;
-
-        public bool TryGet(TKey key, out TValue value)
+        [Test]
+        public void invalidate_removes_item_from_gen1()
         {
-            value = (TValue)key;
-            return true;
+            var cache = new GenerationalMap<int, int>(new ValueIsKey<int, int>(), 10, null);
+            Assert.AreEqual(1, cache.Get(1));
+            Assert.AreEqual(1, cache.Count, "Count");
+            cache.ForceCollect();
+            cache.Invalidate(1);
+            Assert.AreEqual(0, cache.Count, "Count");
         }
 
-        public Task<TValue> GetAsync(TKey key) => Task.FromResult((TValue)key);
 
-        public TValue[] GetBatch(IReadOnlyCollection<TKey> keys)
+        [Test]
+        public void invalidate_raises_event_when_key_in_cache()
         {
-            throw new NotImplementedException();
-        }
-
-        public Task<TValue[]> GetBatchAsync(IReadOnlyCollection<TKey> keys)
-        {
-            throw new NotImplementedException();
-        }
-
-        public void Invalidate(TKey key)
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task InvalidateAsync(TKey key)
-        {
-            throw new NotImplementedException();
-        }
-
-        public void Invalidate(IEnumerable<TKey> keys)
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task InvalidateAsync(IEnumerable<TKey> keys)
-        {
-            throw new NotImplementedException();
+            var cache = new GenerationalMap<int, int>(new ValueIsKey<int, int>(), 10, null);
+            var invalidated = new List<int>();
+            Assert.AreEqual(1, cache.Get(1));
+            cache.Invalidated += (sender, key) => invalidated.Add(key);
+            cache.Invalidate(1);
+            Assert.AreEqual(1, invalidated.Count, "Count");
         }
     }
 

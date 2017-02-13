@@ -295,6 +295,8 @@ namespace BusterWood.Caching
             187751, 225307, 270371, 324449, 389357, 467237, 560689, 672827, 807403, 968897, 1162687, 1395263,
             1674319, 2009191, 2411033, 2893249, 3471899, 4166287, 4999559, 5999471, 7199369};
 
+        public event InvalidatedHandler<TKey> Invalidated;
+
         public static int GetPrime(int min)
         {
             if (min < 0)

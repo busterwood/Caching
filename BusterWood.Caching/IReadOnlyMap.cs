@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 namespace BusterWood.Caching
 {
     /// <summary>A key to single value cache interface</summary>
-    public interface ICache<TKey, TValue>
+    public interface ICache<TKey, TValue> : ICacheInvalidation<TKey>
     {
         int Count { get; }
 
@@ -33,7 +33,10 @@ namespace BusterWood.Caching
         /// <param name="keys">The keys to find</param>
         /// <returns>An array the same size as the input <paramref name="keys"/> that contains a value or default(T) for each key in the corresponding index</returns>
         Task<TValue[]> GetBatchAsync(IReadOnlyCollection<TKey> keys);
+    }
 
+    public interface ICacheInvalidation<TKey>
+    { 
         /// <summary>Removes a <param name="key"/> (and value) from the cache, if it exists.</summary>
         void Invalidate(TKey key);
 
@@ -45,11 +48,19 @@ namespace BusterWood.Caching
 
         /// <summary>Removes a a number of <paramref name="keys"/> (and value) from the cache, if it exists.</summary>
         Task InvalidateAsync(IEnumerable<TKey> keys);
+
+        /// <summary>Allows a consumer to be notified when a entry has been removed from the cache by one of the <see cref="Invalidate(TKey)"/> methods</summary>
+        /// <remarks>
+        /// This event is *not* called on eviction due to garbage collection.
+        /// The implementation of this *should* be implemented using <seealso cref="System.WeakReference"/> so transient caches can be GC'd.
+        /// </remarks>
+        event InvalidatedHandler<TKey> Invalidated;
     }
 
     /// <summary>A key to many value cache interface</summary>
-    public interface IReadOnlyLookup<TKey, TValue>
+    public interface IReadOnlyLookup<TKey, TValue> : ICacheInvalidation<TKey>
     {
+        int Count { get; }
         IReadOnlyCollection<TValue> Get(TKey key);
         Task<IReadOnlyCollection<TValue>> GetAsync(TKey key);
     }

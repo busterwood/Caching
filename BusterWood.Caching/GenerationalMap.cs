@@ -5,20 +5,25 @@ using System.Threading.Tasks;
 
 namespace BusterWood.Caching
 {
+
+    public delegate void InvalidatedHandler<TKey>(object sender, TKey key);
+    
     /// <summary>
     /// A cache map that uses generations to cache to minimize the per-key overhead.
     /// A collection releases all items in Gen1 and moves Gen0 -> Gen1.  Reading an item in Gen1 promotes the item back to Gen0.
     /// </summary>
     public class GenerationalMap<TKey, TValue> : ICache<TKey, TValue>, IDisposable
     {
+        
         readonly ICache<TKey, TValue> _dataSource;
         readonly SemaphoreSlim _lock; // the only lock that support "WaitAsync()"
         internal Dictionary<TKey, TValue> _gen0;
         internal Dictionary<TKey, TValue> _gen1;
         readonly IEqualityComparer<TValue> _valueComparer;
-        readonly Task _periodicCollect;
+        readonly Task _periodicCollect;        
         volatile bool _stop;    // stop the periodic collection
         DateTime _lastCollection; // stops a periodic collection running if a size limit collection as happened since the last periodic GC
+        int _version;
 
         public int? Gen0Limit { get; }
         public TimeSpan? HalfLife { get; }
@@ -46,6 +51,12 @@ namespace BusterWood.Caching
             _lock = new SemaphoreSlim(1);
             if (halfLife != null)
                 _periodicCollect = PeriodicCollection(halfLife.Value);
+            _dataSource.Invalidated += dataSource_Invalidated;
+        }
+
+        void dataSource_Invalidated(object sender, TKey key)
+        {
+            Invalidate(key);
         }
 
         public int Count
@@ -81,9 +92,11 @@ namespace BusterWood.Caching
         /// <returns>TRUE if the item was found in the this cache or the underlying data source, FALSE if no item can be found</returns>
         public bool TryGet(TKey key, out TValue value)
         {
+            int start;
             _lock.Wait();
             try
             {
+                start = _version;
                 if (_gen0.TryGetValue(key, out value))
                     return true;
 
@@ -92,17 +105,41 @@ namespace BusterWood.Caching
                     PromoteGen1ToGen0(key, value);
                     return true;
                 }
+            }
+            finally
+            {
+                _lock.Release();
+            }
 
-                // key not found by this point
-                if (!_dataSource.TryGet(key, out value)) // NOTE: possible blocking
-                    return false;
+            // key not found by this point, read-through to the data source *outside* of the lock as this may take some time, i.e. network or file access
+            TValue dsValue;
+            if (!_dataSource.TryGet(key, out dsValue))
+                return false;
+
+            _lock.Wait();
+            try
+            {
+                if (_version != start)
+                {
+                    // another thread may have added the value for our key so double-check
+                    if (_gen0.TryGetValue(key, out value))
+                        return true;
+
+                    if (_gen1?.TryGetValue(key, out value) == true)
+                    {
+                        PromoteGen1ToGen0(key, value);
+                        return true;
+                    }
+                }
 
                 // about to add, check the limit
                 if (Gen0LimitReached())
                     Collect();
 
                 // a new item in the cache
-                _gen0.Add(key, value);
+                _gen0.Add(key, dsValue);
+                value = dsValue;
+                unchecked { _version++; }
                 return true;
             }
             finally
@@ -124,10 +161,12 @@ namespace BusterWood.Caching
         /// <returns>The value found, or default(T) if not found</returns>
         public async Task<TValue> GetAsync(TKey key)
         {
+            int start;
             TValue value;
             await _lock.WaitAsync();
             try
             {
+                start = _version;
                 if (_gen0.TryGetValue(key, out value))
                     return value;
 
@@ -136,20 +175,55 @@ namespace BusterWood.Caching
                     PromoteGen1ToGen0(key, value);
                     return value;
                 }
+            }
+            finally
+            {
+                _lock.Release();
+            }
 
-                // key not found by this point
-                value = await _dataSource.GetAsync(key); //TODO: do we need Maybe<TValue> to be returned?
+            // key not found by this point, read-through to the data source *outside* of the lock as this may take some time, i.e. network or file access
+            TValue dsValue = await _dataSource.GetAsync(key);
+            if (_valueComparer.Equals(default(TValue), dsValue))
+                return default(TValue);
 
-                if (_valueComparer.Equals(default(TValue), value))
-                    return value; // not found
+            await _lock.WaitAsync();
+            try
+            {
+                if (_version != start)
+                {
+                    // another thread may have added the value for our key so double-check
+                    if (_gen0.TryGetValue(key, out value))
+                        return value;
+
+                    if (_gen1?.TryGetValue(key, out value) == true)
+                    {
+                        PromoteGen1ToGen0(key, value);
+                        return value;
+                    }
+                }
 
                 // about to add, check the limit
                 if (Gen0LimitReached())
                     Collect();
 
                 // a new item in the cache
-                _gen0.Add(key, value);
+                _gen0.Add(key, dsValue);
+                value = dsValue;
+                unchecked { _version++; }
                 return value;
+            }
+            finally
+            {
+                _lock.Release();
+            }
+        }
+
+        internal void ForceCollect()
+        {
+            _lock.Wait();
+            try
+            {
+                Collect();
             }
             finally
             {
@@ -374,12 +448,22 @@ namespace BusterWood.Caching
             {
                 InvalidateKey(key);
             }
+            //TODO: batch invalidation event?
         }
 
         void InvalidateKey(TKey key)
         {
-            if (!_gen0.Remove(key))
-                _gen1.Remove(key);
+            if (_gen0.Remove(key) || _gen1.Remove(key))
+                OnInvalidated(key);
         }
+
+        /// <remarks>Must be within a lock</remarks>
+        void OnInvalidated(TKey key)
+        {
+            Invalidated?.Invoke(this, key);
+        }
+
+        public event InvalidatedHandler<TKey> Invalidated;
     }
+
 }
