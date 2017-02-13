@@ -115,7 +115,7 @@ namespace UnitTests
             string[] keys = CreateKeyStrings(items);
             var starting = GC.GetTotalMemory(true);
             sw.Start();
-            var cache = new GenerationalMap<string, string>(valueIsKey, null, TimeSpan.FromMilliseconds(150));
+            var cache = new GenerationalMap<string, string>(valueIsKey, null, TimeSpan.FromMilliseconds(200));
             foreach (var key in keys)
             {
                 Assert.AreEqual(key, cache.Get(key));

@@ -53,7 +53,7 @@ namespace UnitTests
             string[] keys = CreateKeyStrings(items);
             var pm = new PerformaceMonitor(start: true);
 
-            var cache = new GenerationalMap<string, string>(valueIsKey, null, TimeSpan.FromMilliseconds(50));
+            var cache = new GenerationalMap<string, string>(valueIsKey, null, TimeSpan.FromMilliseconds(100));
             ReadMixKeys(keys, cache);
             cache.Dispose();
             pm.Stop();

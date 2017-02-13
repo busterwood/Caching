@@ -24,41 +24,46 @@ namespace BusterWood.Caching
         DateTime _lastCollection; // stops a periodic collection running if a size limit collection as happened since the last periodic GC
         int _version;   // used to detect other threads modifying the cache
 
+        /// <summary>(Optional) limit on the number of items allowed in Gen0 before a collection</summary>
         public int? Gen0Limit { get; }
-        public TimeSpan? HalfLife { get; }
+
+        /// <summary>Period of time after which a unread item is evicted from the cache</summary>
+        public TimeSpan? TimetoLive { get; }
 
         /// <summary>Create a new read-through cache that has a Gen0 size limit and/or a periodic collection time</summary>
         /// <param name="dataSource">The underlying source to load data from</param>
         /// <param name="gen0Limit">(Optional) limit on the number of items allowed in Gen0 before a collection</param>
-        /// <param name="halfLife">(Optional) time period after which a collection occurs</param>
-        public GenerationalMap(ICache<TKey, TValue> dataSource, int? gen0Limit, TimeSpan? halfLife)
+        /// <param name="timeToLive">(Optional) time period after which a unread item is evicted from the cache</param>
+        public GenerationalMap(ICache<TKey, TValue> dataSource, int? gen0Limit, TimeSpan? timeToLive)
         {
             if (dataSource == null)
                 throw new ArgumentNullException(nameof(dataSource));
-            if (gen0Limit == null && halfLife == null)
+            if (gen0Limit == null && timeToLive == null)
                 throw new ArgumentException("Both gen0Limit and halfLife are not set, at least one must be set");
             if (gen0Limit != null && gen0Limit < 1)
                 throw new ArgumentOutOfRangeException(nameof(gen0Limit), "Value must be one or more");
-            if (halfLife != null && halfLife < TimeSpan.Zero)
-                throw new ArgumentOutOfRangeException(nameof(halfLife), "Value must be greater than zero");
+            if (timeToLive != null && timeToLive < TimeSpan.Zero)
+                throw new ArgumentOutOfRangeException(nameof(timeToLive), "Value must be greater than zero");
 
             _lock = new object();
             _dataSource = dataSource;
             _valueComparer = EqualityComparer<TValue>.Default;
             _gen0 = new Dictionary<TKey, TValue>();
             Gen0Limit = gen0Limit;
-            HalfLife = halfLife;
-            if (halfLife != null)
-                _periodicCollect = PeriodicCollection(halfLife.Value);
+            TimetoLive = timeToLive;
+            if (timeToLive != null)
+                _periodicCollect = PeriodicCollection(timeToLive.Value.TotalMilliseconds / 2);
             _invalidated = dataSource_Invalidated;
             _dataSource.Invalidated += _invalidated;
         }
 
+        /// <summary>Invalidate this cache when the underlying data source notifies us of an cache invalidation</summary>
         void dataSource_Invalidated(object sender, TKey key)
         {
             Invalidate(key);
         }
 
+        /// <summary>The number of items in this cache</summary>
         public int Count
         {
             get
@@ -195,8 +200,9 @@ namespace BusterWood.Caching
             _lastCollection = DateTime.UtcNow;
         }
 
-        async Task PeriodicCollection(TimeSpan period)
+        async Task PeriodicCollection(double ms)
         {
+            var period = TimeSpan.FromMilliseconds(ms);
             for (;;)
             {
                 await Task.Delay(period);

@@ -3,7 +3,6 @@ using System.Diagnostics;
 
 namespace UnitTests
 {
-
     class PerformaceMonitor
     {
         readonly Stopwatch sw = new Stopwatch();
