@@ -14,14 +14,20 @@ namespace BusterWood.Caching
     public class GenerationalCache<TKey, TValue> : ICache<TKey, TValue>, IDisposable
     {
         readonly object _lock; 
-        readonly ICache<TKey, TValue> _dataSource;
-        internal Dictionary<TKey, Maybe<TValue>> _gen0;
-        internal Dictionary<TKey, Maybe<TValue>> _gen1;
+        readonly ICache<TKey, TValue> _dataSource;      // the underlying source of values
+        internal Dictionary<TKey, Maybe<TValue>> _gen0; // internal for test visibility
+        internal Dictionary<TKey, Maybe<TValue>> _gen1; // internal for test visibility
         readonly Task _periodicCollect;
-        readonly InvalidatedHandler<TKey> _invalidated;
+        readonly InvalidatedHandler<TKey> _invalidated; // needed so we can properly dispose of event
         volatile bool _stop;    // stop the periodic collection
         DateTime _lastCollection; // stops a periodic collection running if a size limit collection as happened since the last periodic GC
-        int _version;   // used to detect other threads modifying the cache
+        int _version;       // used to detect other threads modifying the cache
+
+        /// <summary>the total number of collections</summary>
+        public int Collections { get; private set; }
+
+        /// <summary>The total number of item that have been evicted</summary>
+        public int Evicted { get; private set; }
 
         /// <summary>(Optional) limit on the number of items allowed in Gen0 before a collection</summary>
         public int? Gen0Limit { get; }
@@ -169,11 +175,14 @@ namespace BusterWood.Caching
 
         void Collect()
         {
+            Collections++;
+
             // don't create a new dictionary if both are empty
             if (_gen0.Count == 0 && (_gen1?.Count).GetValueOrDefault() == 0)
                 return;
             if (_stop)
                 return;
+            Evicted += (_gen1?.Count).GetValueOrDefault();
             _gen1 = _gen0; // Gen1 items are dropped from the cache at this point
             _gen0 = new Dictionary<TKey, Maybe<TValue>>(); // Gen0 is now empty, we choose not to re-use Gen1 dictionary so the memory can be GC'd
             _lastCollection = DateTime.UtcNow;
@@ -341,7 +350,7 @@ namespace BusterWood.Caching
                 OnInvalidated(key);
         }
 
-        /// <remarks>Must be within a lock</remarks>
+        /// <remarks>Must be called from within the lock</remarks>
         void OnInvalidated(TKey key)
         {
             Invalidated?.Invoke(this, key);

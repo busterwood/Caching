@@ -23,7 +23,7 @@ namespace UnitTests
         {
             var pm = new PerformaceMonitor(start: true);
 
-            var cache = new BitPseudoLruMap<string, string>(dataSource.WithThunderingHurdProtection(), keys.Length / 2);
+            var cache = new BitPseudoLruMap<string, string>(valueIsKey.WithThunderingHurdProtection(), keys.Length / 2);
             ReadMixKeys(keys, cache);
 
             pm.Stop();
