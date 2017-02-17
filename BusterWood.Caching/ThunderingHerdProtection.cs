@@ -4,10 +4,13 @@ using System.Threading.Tasks;
 
 namespace BusterWood.Caching
 {
-    /// <summary>Prevents calling the underlying data source concurrently *for the same key*.</summary>
+    /// <summary>
+    /// Used to prevent multiple threads calling an underlying database, or remote service, to load the value for the *same* key.
+    /// Different keys are handled concurrently, but indiviual keys are read by only one thread.
+    /// </summary>
     public class ThunderingHerdProtection<TKey, TValue> : ICache<TKey, TValue>
     {
-        readonly Dictionary<TKey, TaskCompletionSource<Maybe<TValue>>> loading;
+        readonly Dictionary<TKey, TaskCompletionSource<Maybe<TValue>>> _loading; // only populated keys currently being read
         readonly ICache<TKey, TValue> _dataSource;
         readonly InvalidatedHandler<TKey> _invalidated;
 
@@ -15,8 +18,8 @@ namespace BusterWood.Caching
         {
             if (dataSource == null)
                 throw new ArgumentNullException(nameof(dataSource));
-            this._dataSource = dataSource;
-            loading = new Dictionary<TKey, TaskCompletionSource<Maybe<TValue>>>();
+            _dataSource = dataSource;
+            _loading = new Dictionary<TKey, TaskCompletionSource<Maybe<TValue>>>();
             _invalidated = dataSource_Invalidated;
             dataSource.Invalidated += _invalidated;
         }
@@ -46,9 +49,9 @@ namespace BusterWood.Caching
         {
             TaskCompletionSource<Maybe<TValue>> tcs;
             bool alreadyLoading;
-            lock (loading)
+            lock (_loading)
             {
-                alreadyLoading = loading.TryGetOrAdd(key, NewTcs, out tcs);
+                alreadyLoading = _loading.TryGetOrAdd(key, NewTcs, out tcs);
             }
 
             if (alreadyLoading)
@@ -61,9 +64,9 @@ namespace BusterWood.Caching
             var maybe = _dataSource.Get(key); // blocks
 
             tcs.SetResult(maybe); // tell any waiting threads the loaded value
-            lock (loading)
+            lock (_loading)
             {
-                loading.Remove(key);
+                _loading.Remove(key);
             }
             return maybe;
         }
@@ -72,9 +75,9 @@ namespace BusterWood.Caching
         {
             TaskCompletionSource<Maybe<TValue>> tcs;
             bool alreadyLoading;
-            lock (loading)
+            lock (_loading)
             {
-                alreadyLoading = loading.TryGetOrAdd(key, NewTcs, out tcs);
+                alreadyLoading = _loading.TryGetOrAdd(key, NewTcs, out tcs);
             }
 
             if (alreadyLoading)
@@ -86,9 +89,9 @@ namespace BusterWood.Caching
             var maybe = await _dataSource.GetAsync(key);
 
             tcs.SetResult(maybe);
-            lock (loading)
+            lock (_loading)
             {
-                loading.Remove(key);
+                _loading.Remove(key);
             }
             return maybe;
         }
@@ -109,9 +112,9 @@ namespace BusterWood.Caching
             Maybe<TValue>[] loaded = _dataSource.GetBatch(keys);
 
             SetAllCompletionSources(batch.TaskCompletionSources, loaded);
-            lock (loading)
+            lock (_loading)
             {
-                loading.RemoveAll(keys);
+                _loading.RemoveAll(keys);
             }
             return loaded;
         }
@@ -121,13 +124,13 @@ namespace BusterWood.Caching
             var tcs = new TaskCompletionSource<Maybe<TValue>>[keys.Count];
             var alreadyLoading = new bool[keys.Count];
             int toLoadCount = 0;
-            lock (loading)
+            lock (_loading)
             {
                 int i = 0;
                 foreach (var k in keys)
                 {
                     TaskCompletionSource<Maybe<TValue>> t;
-                    alreadyLoading[i] = loading.TryGetOrAdd(k, NewTcs, out t);
+                    alreadyLoading[i] = _loading.TryGetOrAdd(k, NewTcs, out t);
                     if (alreadyLoading[i])
                         toLoadCount++;
                     tcs[i] = t;
