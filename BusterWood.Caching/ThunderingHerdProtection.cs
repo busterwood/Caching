@@ -5,13 +5,13 @@ using System.Threading.Tasks;
 namespace BusterWood.Caching
 {
     /// <summary>Prevents calling the underlying data source concurrently *for the same key*.</summary>
-    public class ThunderingHurdProtection<TKey, TValue> : ICache<TKey, TValue>
+    public class ThunderingHerdProtection<TKey, TValue> : ICache<TKey, TValue>
     {
         readonly Dictionary<TKey, TaskCompletionSource<Maybe<TValue>>> loading;
         readonly ICache<TKey, TValue> _dataSource;
         readonly InvalidatedHandler<TKey> _invalidated;
 
-        public ThunderingHurdProtection(ICache<TKey, TValue> dataSource)
+        public ThunderingHerdProtection(ICache<TKey, TValue> dataSource)
         {
             if (dataSource == null)
                 throw new ArgumentNullException(nameof(dataSource));

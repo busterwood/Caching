@@ -46,7 +46,7 @@
     <Compile Include="GenerationalCache.cs" />
     <Compile Include="Maybe.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="ThunderingHurdProtection.cs" />
+    <Compile Include="ThunderingHerdProtection.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="caching.snk" />

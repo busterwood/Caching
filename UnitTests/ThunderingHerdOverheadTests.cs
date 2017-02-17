@@ -23,7 +23,7 @@ namespace UnitTests
         {
             var pm = new PerformaceMonitor(start: true);
 
-            var cache = new BitPseudoLruMap<string, string>(valueIsKey.WithThunderingHurdProtection(), keys.Length / 2);
+            var cache = new BitPseudoLruMap<string, string>(valueIsKey.WithThunderingHerdProtection(), keys.Length / 2);
             ReadMixKeys(keys, cache);
 
             pm.Stop();
@@ -37,7 +37,7 @@ namespace UnitTests
         {
             var pm = new PerformaceMonitor(start: true);
 
-            var cache = valueIsKey.WithThunderingHurdProtection().WithGenerationalCache(keys.Length / 4, null);
+            var cache = valueIsKey.WithThunderingHerdProtection().WithGenerationalCache(keys.Length / 4, null);
             ReadMixKeys(keys, cache);
             cache.Dispose();
             pm.Stop();
@@ -51,7 +51,7 @@ namespace UnitTests
         {
             var pm = new PerformaceMonitor(start: true);
 
-            var cache = valueIsKey.WithThunderingHurdProtection().WithGenerationalCache(null, TimeSpan.FromSeconds(5));
+            var cache = valueIsKey.WithThunderingHerdProtection().WithGenerationalCache(null, TimeSpan.FromSeconds(5));
             ReadMixKeys(keys, cache);
             cache.Dispose();
             pm.Stop();

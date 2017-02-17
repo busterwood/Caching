@@ -17,13 +17,13 @@ namespace BusterWood.Caching
         }
 
         /// <summary>
-        /// Adds <see cref="ThunderingHurdProtection{TKey, TValue}"/> to a cache which prevents 
+        /// Adds <see cref="ThunderingHerdProtection{TKey, TValue}"/> to a cache which prevents 
         /// calling the data source concurrently *for the same key*.
         /// </summary>
         /// <param name="cache">The underlying cache to load data from</param>
-        public static ThunderingHurdProtection<TKey, TValue> WithThunderingHurdProtection<TKey, TValue>(this ICache<TKey, TValue> cache)
+        public static ThunderingHerdProtection<TKey, TValue> WithThunderingHerdProtection<TKey, TValue>(this ICache<TKey, TValue> cache)
         {
-            return new ThunderingHurdProtection<TKey, TValue>(cache);
+            return new ThunderingHerdProtection<TKey, TValue>(cache);
         }
 
         /// <summary>Tries to get a value for a key</summary>
