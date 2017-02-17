@@ -2,7 +2,6 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Threading;
 using System.Threading.Tasks;
 
 namespace BusterWood.Caching
@@ -42,17 +41,10 @@ namespace BusterWood.Caching
 
         public int Count => count;
 
-        public TValue Get(TKey key)
-        {
-            TValue value;
-            TryGet(key, out value);
-            return value;
-        }
-
         /// <summary>Tries to get a value from this cache, or load it from the underlying cache</summary>
         /// <param name="key">Teh key to find</param>
         /// <returns>The value found, or default(T) if not found</returns>
-        public bool TryGet(TKey key, out TValue value)
+        public Maybe<TValue> Get(TKey key)
         {
             lock (_lock)
             {
@@ -60,18 +52,17 @@ namespace BusterWood.Caching
                 if (i >= 0)
                 {
                     recent[i] = true;
-                    value = entries[i].value;
-                    return true;
+                    return Maybe.Some(entries[i].value);
                 }
             }
-            
+
             // key not found by this point
-            if (!_nextLevel.TryGet(key, out value)) // NOTE: possible blocking
-                return false; // not found
+            var loaded = _nextLevel.Get(key);
+            if (!loaded.HasValue) // NOTE: possible blocking
+                return loaded;
 
             lock(_lock)
             {
-
                 // about to add, check the limit
                 if (count >= _capacity)
                 {
@@ -80,8 +71,8 @@ namespace BusterWood.Caching
                 }
 
                 // a new item in the cache
-                Insert(key, value, false);
-                return true;
+                Insert(key, loaded.Value, false);
+                return loaded;
             }
         }
 
@@ -110,14 +101,6 @@ namespace BusterWood.Caching
 
             // no entry marked, just use the first one we find
             return entries[first].key;
-        }
-
-        /// <summary>Tries to get a value from this cache, or load it from the underlying cache</summary>
-        /// <param name="key">Teh key to find</param>
-        /// <returns>The value found, or default(T) if not found</returns>
-        public async Task<TValue> GetAsync(TKey key)
-        {
-            throw new NotImplementedException();
         }
 
         private int FindEntry(TKey key)
@@ -353,16 +336,6 @@ namespace BusterWood.Caching
             return GetPrime(newSize);
         }
 
-        public TValue[] GetBatch(IReadOnlyCollection<TKey> keys)
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task<TValue[]> GetBatchAsync(IReadOnlyCollection<TKey> keys)
-        {
-            throw new NotImplementedException();
-        }
-
         public void Invalidate(TKey key)
         {
             throw new NotImplementedException();
@@ -379,6 +352,26 @@ namespace BusterWood.Caching
         }
 
         public Task InvalidateAsync(IEnumerable<TKey> keys)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<Maybe<TValue>> GetAsync(TKey key)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Maybe<TValue>[] GetBatch(IReadOnlyCollection<TKey> keys)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<Maybe<TValue>[]> GetBatchAsync(IReadOnlyCollection<TKey> keys)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void Dispose()
         {
             throw new NotImplementedException();
         }

@@ -7,74 +7,72 @@ using System.Threading.Tasks;
 namespace UnitTests
 {
     [TestFixture]
-    public class MixedReadWriteOverheadTests
+    public class ThunderingHerdOverheadTests
     {
-        ValueIsKey<string, string> valueIsKey = new ValueIsKey<string, string> {  };
+        ValueIsKey<string, string> valueIsKey;
+        string[] keys = CreateKeyStrings(100);
 
-        [TestCase(10000)]
-        [TestCase(100000)]
-        [TestCase(500000)]
-        public void BitPseudoLru_cache_half(int items)
+        [SetUp]
+        public void Setup()
         {
-            string[] keys = CreateKeyStrings(items);
+            valueIsKey = new ValueIsKey<string, string> { SleepFor=TimeSpan.FromMilliseconds(10) };
+        }
+
+        [TestCase(-1)]
+        public void BitPseudoLru_cache_half(int x)
+        {
             var pm = new PerformaceMonitor(start: true);
 
-            var cache = new BitPseudoLruMap<string, string>(valueIsKey, items / 2);
+            var cache = new BitPseudoLruMap<string, string>(dataSource.WithThunderingHurdProtection(), keys.Length / 2);
             ReadMixKeys(keys, cache);
 
             pm.Stop();
-            Console.WriteLine(pm.Report(items, cache.Count));
+            Console.WriteLine(pm.Report(keys.Length, cache.Count) + $", {valueIsKey.HitCount} hits to underlying data source");
             GC.KeepAlive(cache);
             GC.KeepAlive(keys);
         }
 
-        [TestCase(10000)]
-        [TestCase(100000)]
-        [TestCase(500000)]
-        public void generational_cache_half(int items)
+        [TestCase(-1)]
+        public void generational_cache_half(int x)
         {
-            string[] keys = CreateKeyStrings(items);
             var pm = new PerformaceMonitor(start: true);
 
-            var cache = valueIsKey.WithGenerationalCache(items / 4, null);
-            ReadMixKeys(keys, cache);
-            cache.Dispose();
-            pm.Stop();
-            Console.WriteLine(pm.Report(items, cache.Count));
-            GC.KeepAlive(cache);
-            GC.KeepAlive(keys);
-        }
-
-        [TestCase(10000)]
-        [TestCase(100000)]
-        [TestCase(500000)]
-        public void generational_timed(int items)
-        {
-            string[] keys = CreateKeyStrings(items);
-            var pm = new PerformaceMonitor(start: true);
-
-            var cache = valueIsKey.WithGenerationalCache(null, TimeSpan.FromMilliseconds(100));
+            var cache = valueIsKey.WithThunderingHurdProtection().WithGenerationalCache(keys.Length / 4, null);
             ReadMixKeys(keys, cache);
             cache.Dispose();
             pm.Stop();
-            Console.WriteLine(pm.Report(items, cache.Count));
+            Console.WriteLine(pm.Report(keys.Length, cache.Count) + $", {valueIsKey.HitCount} hits to underlying data source");
             GC.KeepAlive(cache);
             GC.KeepAlive(keys);
         }
 
-        private void ReadMixKeys(string[] keys, ICache<string, string> cache)
+        [TestCase(-1)]
+        public void generational_timed(int x)
+        {
+            var pm = new PerformaceMonitor(start: true);
+
+            var cache = valueIsKey.WithThunderingHurdProtection().WithGenerationalCache(null, TimeSpan.FromSeconds(5));
+            ReadMixKeys(keys, cache);
+            cache.Dispose();
+            pm.Stop();
+            Console.WriteLine(pm.Report(keys.Length, cache.Count) + $", {valueIsKey.HitCount} hits to underlying data source");
+            GC.KeepAlive(cache);
+            GC.KeepAlive(keys);
+        }
+
+        static void ReadMixKeys(string[] keys, ICache<string, string> cache)
         {
             Task[] tasks = new Task[4];
             for (int i = 0; i < tasks.Length; i++)
             {
-                var count = keys.Length / 3;
-                var offset = (keys.Length / 4) * i;
+                var count = keys.Length;
+                var offset = 0; // (keys.Length / 4) * i;
                 tasks[i] = Task.Run(() => ReadMany(keys, cache, offset, count));
             }
             Task.WaitAll(tasks);
         }
 
-        private void ReadMany(string[] keys, ICache<string, string> cache, int offset, int count)
+        static void ReadMany(string[] keys, ICache<string, string> cache, int offset, int count)
         {
             for (int i = 0; i < count; i++)
             {
@@ -86,19 +84,16 @@ namespace UnitTests
             }
         }
 
-        [TestCase(10000)]
-        [TestCase(100000)]
-        [TestCase(500000)]
-        public void concurrent_dictionary_memory_overhead(int items)
+        [TestCase(-1)]
+        public void concurrent_dictionary_memory_overhead(int x)
         {
-            string[] keys = CreateKeyStrings(items);
             var pm = new PerformaceMonitor(start: true);
 
             var cache = new ConcurrentDictionary<string, string>();
             ReadMixKeys(keys, cache);
             
             pm.Stop();
-            Console.WriteLine(pm.Report(items, cache.Count));
+            Console.WriteLine(pm.Report(keys.Length, cache.Count) + $", {valueIsKey.HitCount} hits to underlying data source");
             GC.KeepAlive(cache);
             GC.KeepAlive(keys);
         }
@@ -108,8 +103,8 @@ namespace UnitTests
             Task[] tasks = new Task[4];
             for (int i = 0; i < tasks.Length; i++)
             {
-                var count = keys.Length / 3;
-                var offset = (keys.Length / 4) * i;
+                var count = keys.Length;
+                var offset = 0; //  (keys.Length / 4) * i;
                 tasks[i] = Task.Run(() => ReadMany(keys, cache, offset, count));
             }
             Task.WaitAll(tasks);

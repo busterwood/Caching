@@ -4,20 +4,19 @@ using System.Threading.Tasks;
 
 namespace BusterWood.Caching
 {
-
     public delegate void InvalidatedHandler<TKey>(object sender, TKey key);
     
     /// <summary>
     /// A cache map that uses generations to cache to minimize the per-key overhead.
     /// A collection releases all items in Gen1 and moves Gen0 -> Gen1.  Reading an item in Gen1 promotes the item back to Gen0.
     /// </summary>
-    public class GenerationalMap<TKey, TValue> : ICache<TKey, TValue>, IDisposable
+    /// <remarks>This version REMEMBERS cache misses</remarks>
+    public class GenerationalCache<TKey, TValue> : ICache<TKey, TValue>, IDisposable
     {
         readonly object _lock; 
         readonly ICache<TKey, TValue> _dataSource;
-        readonly IEqualityComparer<TValue> _valueComparer;
-        internal Dictionary<TKey, TValue> _gen0;
-        internal Dictionary<TKey, TValue> _gen1;
+        internal Dictionary<TKey, Maybe<TValue>> _gen0;
+        internal Dictionary<TKey, Maybe<TValue>> _gen1;
         readonly Task _periodicCollect;
         readonly InvalidatedHandler<TKey> _invalidated;
         volatile bool _stop;    // stop the periodic collection
@@ -34,7 +33,7 @@ namespace BusterWood.Caching
         /// <param name="dataSource">The underlying source to load data from</param>
         /// <param name="gen0Limit">(Optional) limit on the number of items allowed in Gen0 before a collection</param>
         /// <param name="timeToLive">(Optional) time period after which a unread item is evicted from the cache</param>
-        public GenerationalMap(ICache<TKey, TValue> dataSource, int? gen0Limit, TimeSpan? timeToLive)
+        public GenerationalCache(ICache<TKey, TValue> dataSource, int? gen0Limit, TimeSpan? timeToLive)
         {
             if (dataSource == null)
                 throw new ArgumentNullException(nameof(dataSource));
@@ -47,8 +46,7 @@ namespace BusterWood.Caching
 
             _lock = new object();
             _dataSource = dataSource;
-            _valueComparer = EqualityComparer<TValue>.Default;
-            _gen0 = new Dictionary<TKey, TValue>();
+            _gen0 = new Dictionary<TKey, Maybe<TValue>>();
             Gen0Limit = gen0Limit;
             TimetoLive = timeToLive;
             if (timeToLive != null)
@@ -75,49 +73,33 @@ namespace BusterWood.Caching
             }
         }
 
-        /// <summary>Tries to get a value from this cache, or load it from the underlying cache</summary>
-        /// <param name="key">The key to find</param>
-        /// <returns>The value found, or default(T) if not found</returns>
-        public TValue Get(TKey key)
+        public Maybe<TValue> Get(TKey key)
         {
-            TValue value;
-            TryGet(key, out value);
-            return value;
-        }
-
-        /// <summary>Tries to get a value from this cache, or load it from the underlying cache</summary>
-        /// <param name="key">Teh key to find</param>
-        /// <param name="value">The value found, or default(T) if not found</param>
-        /// <returns>TRUE if the item was found in the this cache or the underlying data source, FALSE if no item can be found</returns>
-        public bool TryGet(TKey key, out TValue value)
-        {
+            Maybe<TValue> result;
             int start;
             lock(_lock)
             {
                 start = _version;
-                if (TryGetAnyGen(key, out value))
-                    return true;
+                if (TryGetAnyGen(key, out result))
+                    return result;
             }            
-            
+
             // key not found by this point, read-through to the data source *outside* of the lock as this may take some time, i.e. network or file access
-            TValue loaded;
-            if (!_dataSource.TryGet(key, out loaded))
-                return false;
+            var loaded =_dataSource.Get(key);
 
             lock(_lock)
             {
                 // another thread may have added the value for our key so double-check
-                if (_version != start && TryGetAnyGen(key, out value))
-                    return true;
+                if (_version != start && TryGetAnyGen(key, out result))
+                    return result;
 
-                AddToGen0(key, loaded);
-                value = loaded;
-                return true;
+                AddToGen0(key, loaded); // store the value (or the fact that the data source does *not* contain the value
+                return loaded;
             }
         }
 
         /// <summary>Gets the <paramref name="value"/> for a <paramref name="key"/> from Gen0 or Gen1</summary>
-        bool TryGetAnyGen(TKey key, out TValue value)
+        bool TryGetAnyGen(TKey key, out Maybe<TValue> value)
         {
             if (_gen0.TryGetValue(key, out value))
                 return true;
@@ -130,13 +112,13 @@ namespace BusterWood.Caching
             return false;
         }
 
-        void PromoteGen1ToGen0(TKey key, TValue value)
+        void PromoteGen1ToGen0(TKey key, Maybe<TValue> value)
         {
             _gen1.Remove(key);
             _gen0.Add(key, value);
         }
 
-        void AddToGen0(TKey key, TValue loaded)
+        void AddToGen0(TKey key, Maybe<TValue> loaded)
         {
             // about to add, check the limit
             if (Gen0LimitReached())
@@ -152,10 +134,10 @@ namespace BusterWood.Caching
         /// <summary>Tries to get a value from this cache, or load it from the underlying cache</summary>
         /// <param name="key">The key to find</param>
         /// <returns>The value found, or default(T) if not found</returns>
-        public async Task<TValue> GetAsync(TKey key)
+        public async Task<Maybe<TValue>> GetAsync(TKey key)
         {
             int start;
-            TValue value;
+            Maybe<TValue> value;
             lock(_lock)
             {
                 start = _version;
@@ -164,10 +146,7 @@ namespace BusterWood.Caching
             }  
                       
             // key not found by this point, read-through to the data source *outside* of the lock as this may take some time, i.e. network or file access
-            TValue loaded = await _dataSource.GetAsync(key);
-
-            if (_valueComparer.Equals(default(TValue), loaded))
-                return default(TValue);
+            var loaded = await _dataSource.GetAsync(key);
 
             lock(_lock)
             {
@@ -196,7 +175,7 @@ namespace BusterWood.Caching
             if (_stop)
                 return;
             _gen1 = _gen0; // Gen1 items are dropped from the cache at this point
-            _gen0 = new Dictionary<TKey, TValue>(); // Gen0 is now empty, we choose not to re-use Gen1 dictionary so the memory can be GC'd
+            _gen0 = new Dictionary<TKey, Maybe<TValue>>(); // Gen0 is now empty, we choose not to re-use Gen1 dictionary so the memory can be GC'd
             _lastCollection = DateTime.UtcNow;
         }
 
@@ -229,12 +208,12 @@ namespace BusterWood.Caching
         /// <summary>Tries to get the values associated with the <paramref name="keys" /></summary>
         /// <param name="keys">The keys to find</param>
         /// <returns>An array the same size as the input <paramref name="keys" /> that contains a value or default(T) for each key in the corresponding index</returns>
-        public TValue[] GetBatch(IReadOnlyCollection<TKey> keys)
+        public Maybe<TValue>[] GetBatch(IReadOnlyCollection<TKey> keys)
         {
             BatchLoad batch;
             lock (_lock)
             {
-                batch = TryGetBatch(keys);
+                batch = TryGetBatchFromCache(keys);
             }
 
             // we got all the results from the cache
@@ -250,12 +229,12 @@ namespace BusterWood.Caching
         /// <summary>Tries to get the values associated with the <paramref name="keys" /></summary>
         /// <param name="keys">The keys to find</param>
         /// <returns>An array the same size as the input <paramref name="keys" /> that contains a value or default(T) for each key in the corresponding index</returns>
-        public async Task<TValue[]> GetBatchAsync(IReadOnlyCollection<TKey> keys)
+        public async Task<Maybe<TValue>[]> GetBatchAsync(IReadOnlyCollection<TKey> keys)
         {
             BatchLoad batch;
             lock (_lock)
             {
-                batch = TryGetBatch(keys);
+                batch = TryGetBatchFromCache(keys);
             }
 
             // we got all the results from the cache
@@ -268,13 +247,13 @@ namespace BusterWood.Caching
             return UpdateCacheAndResults(batch, loaded);
         }
 
-        private BatchLoad TryGetBatch(IReadOnlyCollection<TKey> keys)
+        private BatchLoad TryGetBatchFromCache(IReadOnlyCollection<TKey> keys)
         {
             var batch = new BatchLoad(keys.Count, _version);
             int i = 0;
             foreach (var key in keys)
             {
-                TValue value;
+                Maybe<TValue> value;
                 if (TryGetAnyGen(key, out value))
                 {
                     batch.Results[i] = value;
@@ -291,7 +270,7 @@ namespace BusterWood.Caching
 
         struct BatchLoad
         {
-            public readonly TValue[] Results;
+            public readonly Maybe<TValue>[] Results;
             public readonly List<TKey> MissedKeys;
             public readonly List<int> MissedKeyIdx;
             public readonly int Version;
@@ -299,23 +278,23 @@ namespace BusterWood.Caching
             public BatchLoad(int keys, int version)
             {
                 Version = version;
-                Results = new TValue[keys];
+                Results = new Maybe<TValue>[keys];
                 MissedKeys = new List<TKey>();
                 MissedKeyIdx = new List<int>();
             }
         }
 
-        private TValue[] UpdateCacheAndResults(BatchLoad batch, TValue[] loaded)
+        private Maybe<TValue>[] UpdateCacheAndResults(BatchLoad batch, Maybe<TValue>[] fromDataSource)
         {
             lock (_lock)
             {
                 int k = 0;
-                foreach (var dsValue in loaded)
+                foreach (var loaded in fromDataSource)
                 {
-                    if (!_valueComparer.Equals(default(TValue), dsValue))
+                    if (loaded.HasValue)
                     {
                         var idx = batch.MissedKeyIdx[k];
-                        TValue cached;
+                        Maybe<TValue> cached;
                         if (batch.Version != _version && TryGetAnyGen(batch.MissedKeys[k], out cached))
                         {
                             // another thread loaded our value
@@ -325,8 +304,8 @@ namespace BusterWood.Caching
                         else
                         {
                             // we loaded the value, store it in the cache
-                            AddToGen0(batch.MissedKeys[k], dsValue);
-                            batch.Results[idx] = dsValue;
+                            AddToGen0(batch.MissedKeys[k], loaded);
+                            batch.Results[idx] = loaded;
                         }
                     }
                     k++;
@@ -370,5 +349,4 @@ namespace BusterWood.Caching
 
         public event InvalidatedHandler<TKey> Invalidated;
     }
-
 }

@@ -11,6 +11,10 @@ namespace UnitTests
         where TValue : TKey
     {
         public int SpinWaitCount;
+        public TimeSpan SleepFor;
+        private int ConcurrentGets;
+
+        public int HitCount { get; set; }
 
         public int Count
         {
@@ -22,35 +26,32 @@ namespace UnitTests
 
         public event InvalidatedHandler<TKey> Invalidated;
 
-        public TValue Get(TKey key)
+        public Maybe<TValue> Get(TKey key)
         {
+            var gets = Interlocked.Increment(ref ConcurrentGets);
             if (SpinWaitCount > 0)
                 Thread.SpinWait(SpinWaitCount);
+            if (SleepFor > TimeSpan.Zero)
+                Thread.Sleep(SleepFor + TimeSpan.FromMilliseconds(gets-1));
+            HitCount++;
+            Interlocked.Decrement(ref ConcurrentGets);
             return (TValue)key;
         }
 
-        public bool TryGet(TKey key, out TValue value)
-        {
-            if (SpinWaitCount > 0)
-                Thread.SpinWait(SpinWaitCount);
-            value = (TValue)key;
-            return true;
-        }
+        public Task<Maybe<TValue>> GetAsync(TKey key) => Task.FromResult(Maybe.Some((TValue)key));
 
-        public Task<TValue> GetAsync(TKey key) => Task.FromResult((TValue)key);
-
-        public TValue[] GetBatch(IReadOnlyCollection<TKey> keys)
+        public Maybe<TValue>[] GetBatch(IReadOnlyCollection<TKey> keys)
         {
-            var results = new TValue[keys.Count];
+            var results = new Maybe<TValue>[keys.Count];
             int i = 0;
             foreach (var k in keys)
             {
-                results[i++] = (TValue)k;
+                results[i++] = Maybe.Some((TValue)k);
             }
             return results;
         }
 
-        public Task<TValue[]> GetBatchAsync(IReadOnlyCollection<TKey> keys)
+        public Task<Maybe<TValue>[]> GetBatchAsync(IReadOnlyCollection<TKey> keys)
         {
             return Task.FromResult(GetBatch(keys));
         }
@@ -71,6 +72,11 @@ namespace UnitTests
         }
 
         public Task InvalidateAsync(IEnumerable<TKey> keys)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void Dispose()
         {
             throw new NotImplementedException();
         }
