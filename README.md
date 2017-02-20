@@ -44,3 +44,7 @@ The following tests compare a generation cache with a Bit-Pseduo LRU cache.
 | Generational 25% Gen0 Limit | 183 ms | 166,664 | 11,926,556 | 4,637,388 | 27.82 |
 | Generational 50ms Half-life | 159 ms | 331,819 | 31,131,248 | 9,617,896 | 28.99 |
 | Concurrent Dictionary | 205 ms | 500,000 | 37,960,620 | 16,607,692 | 33.22 |
+
+# Thundering Herd Protection
+
+`ThunderingHerdProtection<TKey, TValue>` can be used to prevent multiple threads calling an underlying database, or remote service, to load the value for the *same* key.  Different keys are handled concurrently, but indiviual keys are read by only one thread.
