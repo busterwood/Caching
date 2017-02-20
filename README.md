@@ -3,7 +3,7 @@ A low memory overhead read-through cache implemented using generations.
 
 The `GenerationalMap<TKey, TValue>` is a read-though cache used for caching items read from an underlying data source.
 
-# How does it work?
+## How does it work?
 
 The design is insipred by "generational garbage collection" in that:
 
@@ -12,7 +12,7 @@ The design is insipred by "generational garbage collection" in that:
 * when a collection happens `Gen1` is thrown away and `Gen0` is moved to `Gen1`
 * when an item is read from `Gen1` it is promted back to `Gen0`
 
-# When does a collection happen?
+## When does a collection happen?
 
 The `GenerationalMap<TKey, TValue>` contructor takes two arguments that control collection:
 
@@ -25,7 +25,7 @@ One or both parameters neeed to be set, i.e.
 * you can just specify a `timeToLive` which will let the cache grow to any size but will ensure items not used for "a long time" are evicted
 * you can specify both `gen0Limit` and `halfLife` to combine the attributes of both
 
-# Performance and Memory
+## Performance and Memory
 
 The following tests compare a generation cache with a Bit-Pseduo LRU cache.
 
