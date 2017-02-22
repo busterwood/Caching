@@ -10,6 +10,8 @@ The `GenerationalCache<TKey, TValue>` is a read-though cache used for caching it
 * `Task<Maybe<TValue>> GetAsync(TKey key)` tries to get a value for a key asynchronusly
 * `Maybe<TValue>[] GetBatch(IReadOnlyCollection<TKey> keys)` tries to get the values associated with some keys
 * `Task<Maybe<TValue>[]> GetBatchAsync(IReadOnlyCollection<TKey> keys)` tries to get the values associated with the keys asynchronusly
+* `void Invalidate(TKey key)` evicts a specific key from the cache
+* `void Invalidate(IReadOnlycollection<TKey> keys)` some keys from the cache
 
 The return type is `Maybe<TValue>` is a struct that has a value or not, much like `Nullable<T>`, but work for both struct and class types.
 
@@ -27,7 +29,9 @@ You can also compose caches with the following extension methods:
 
 ## Thundering Herd Protection
 
-`ThunderingHerdProtection<TKey, TValue>` can be used to prevent multiple threads calling an underlying database, or remote service, to load the value for the *same* key.  Different keys are handled concurrently, but indiviual keys are read by only one thread.
+`ThunderingHerdProtection<TKey, TValue>` can be used to prevent multiple threads calling an underlying database, or remote service, to load the value for the *same* key.  
+Different keys are handled concurrently, but indiviual keys are read by only one thread.  This can be used on the client side, before calling a remote service or database, 
+and it can be used on the the server side.
 
 ## How does it work?
 
@@ -40,7 +44,7 @@ The design is insipred by "generational garbage collection" in that:
 
 ### When does a collection happen?
 
-The `GenerationalMap<TKey, TValue>` contructor takes two arguments that control collection:
+The `GenerationalCache<TKey, TValue>` contructor takes two arguments that control collection:
 
 * if a `gen0Limit` is set then a collection will occur when `Gen0` reaches that limit
 * if `timeToLive` is set then a an un-read entry will be evicted some time after this (unless the `gen0Limit` was reached since the last collection)
@@ -50,6 +54,10 @@ One or both parameters neeed to be set, i.e.
 * you can just specify a `gen0Limit`, but then an the cache will never be cleared, even if it is not used again for a long time
 * you can just specify a `timeToLive` which will let the cache grow to any size but will ensure items not used for "a long time" are evicted
 * you can specify both `gen0Limit` and `halfLife` to combine the attributes of both
+
+### What is cached?
+
+`GenerationalCache<TKey, TValue>` remembers the results of all read-though operations, so it records the value for a key or it records that a *key does not have a value*.
 
 ### Performance and Memory
 
