@@ -1,7 +1,27 @@
 # Caching
 A low memory overhead read-through cache implemented using generations.
 
-The `GenerationalMap<TKey, TValue>` is a read-though cache used for caching items read from an underlying data source.
+The `GenerationalCache<TKey, TValue>` is a read-though cache used for caching items read from an underlying data source.
+
+# Usage
+
+`GenerationalCache<TKey, TValue>` implementes the `ICache<TKey, TValue>` interface, which has the methods such as:
+* `Maybe<TValue> Get(TKey key)` tries to get a value for a key
+* `Task<Maybe<TValue>> GetAsync(TKey key)` tries to get a value for a key asynchronusly
+* `Maybe<TValue>[] GetBatch(IReadOnlyCollection<TKey> keys)` tries to get the values associated with some keys
+* `Task<Maybe<TValue>[]> GetBatchAsync(IReadOnlyCollection<TKey> keys)` tries to get the values associated with the keys asynchronusly
+
+The return type is `Maybe<TValue>` is a struct that has a value or not, much like `Nullable<T>`, but work for both struct and class types.
+
+`ICache<TKey, TValue>` also has the following *extension* methods which may make the cache easier to consume in existing code:
+
+* `WithGenerationalCache(int? gen0Limit, TimeSpan? timeToLive)` create a new read-through cache that has a Gen0 size limit and/or a periodic collection time
+* `WithThunderingHerdProtection()` adds ThunderingHerdProtection to a cache which prevents calling the data source concurrently *for the same key*.
+* `TryGet(TKey key, out TValue value)` tries to get a value for a key
+* `GetValueOrDefault(TKey key)` tries to get a value for a key
+* `GetValueOrDefaultAsync(TKey key)` tries to get a value for a key
+* `GetBatchValueOrDefault(IReadOnlyCollection<TKey> keys)` tries to get the values associated with some keys
+* `GetBatchValueOfDefaultAsync(IReadOnlyCollection<TKey> keys)` tries to get the values associated with some keys
 
 ## How does it work?
 
