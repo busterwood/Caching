@@ -42,7 +42,7 @@ The design is insipred by "generational garbage collection" in that:
 * when a collection happens `Gen1` is thrown away and `Gen0` is moved to `Gen1`
 * when an item is read from `Gen1` it is promted back to `Gen0`
 
-Internally, `GenerationalCache<TKey, TValue>` uses a lock (Monitor) to protect it's data structures, but the lock is releases if a read to the underlying data source is required.
+Internally, `GenerationalCache<TKey, TValue>` uses a lock (Monitor) to protect it's data structures, but the lock is released if a read to the underlying data source is required.
 
 ### When does a collection happen?
 
