@@ -4,14 +4,13 @@ using System.Threading.Tasks;
 
 namespace BusterWood.Caching
 {
-    public delegate void InvalidatedHandler<TKey>(object sender, TKey key);
     
     /// <summary>
     /// A cache map that uses generations to cache to minimize the per-key overhead.
     /// A collection releases all items in Gen1 and moves Gen0 -> Gen1.  Reading an item in Gen1 promotes the item back to Gen0.
     /// </summary>
     /// <remarks>This version REMEMBERS cache misses</remarks>
-    public class GenerationalCache<TKey, TValue> : ICache<TKey, TValue>, IDisposable
+    public class GenerationalCache<TKey, TValue> : ICache<TKey, TValue>
     {
         readonly object _lock; 
         readonly ICache<TKey, TValue> _dataSource;      // the underlying source of values
@@ -24,16 +23,18 @@ namespace BusterWood.Caching
         int _version;       // used to detect other threads modifying the cache
 
         /// <summary>the total number of collections</summary>
-        public int Collections { get; private set; }
+        public int CollectionCount { get; private set; }
 
         /// <summary>The total number of item that have been evicted</summary>
-        public int Evicted { get; private set; }
+        public int EvictionCount { get; private set; }
 
         /// <summary>(Optional) limit on the number of items allowed in Gen0 before a collection</summary>
         public int? Gen0Limit { get; }
 
         /// <summary>Period of time after which a unread item is evicted from the cache</summary>
         public TimeSpan? TimetoLive { get; }
+
+        public event EvictedHandler<TKey, Maybe<TValue>> Evicted;
 
         /// <summary>Create a new read-through cache that has a Gen0 size limit and/or a periodic collection time</summary>
         /// <param name="dataSource">The underlying source to load data from</param>
@@ -79,6 +80,9 @@ namespace BusterWood.Caching
             }
         }
 
+        /// <summary>Tries to get a value for a key</summary>
+        /// <param name="key">The key to find</param>
+        /// <returns>The <see cref="M:BusterWood.Caching.Maybe.Some``1(``0)" /> if the item was found in the this cache or the underlying data source, otherwise <see cref="M:BusterWood.Caching.Maybe.None``1" /></returns>
         public Maybe<TValue> Get(TKey key)
         {
             Maybe<TValue> result;
@@ -175,14 +179,18 @@ namespace BusterWood.Caching
 
         void Collect()
         {
-            Collections++;
+            CollectionCount++;
 
             // don't create a new dictionary if both are empty
             if (_gen0.Count == 0 && (_gen1?.Count).GetValueOrDefault() == 0)
                 return;
             if (_stop)
                 return;
-            Evicted += (_gen1?.Count).GetValueOrDefault();
+            if ((_gen1?.Count).GetValueOrDefault() > 0)
+            {
+                EvictionCount += (_gen1?.Count).GetValueOrDefault();
+                Evicted?.Invoke(this, _gen1);
+            }
             _gen1 = _gen0; // Gen1 items are dropped from the cache at this point
             _gen0 = new Dictionary<TKey, Maybe<TValue>>(); // Gen0 is now empty, we choose not to re-use Gen1 dictionary so the memory can be GC'd
             _lastCollection = DateTime.UtcNow;

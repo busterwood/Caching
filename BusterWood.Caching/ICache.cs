@@ -28,7 +28,12 @@ namespace BusterWood.Caching
         /// <param name="keys">The keys to find</param>
         /// <returns>An array the same size as the input <paramref name="keys"/> that contains a <see cref="Maybe{T}"/> for each key in the corresponding index</returns>
         Task<Maybe<TValue>[]> GetBatchAsync(IReadOnlyCollection<TKey> keys);
+
+        /// <summary>Optional callback during the eviction process.  Maybe useful if the evicted items need disposing</summary>
+        event EvictedHandler<TKey, Maybe<TValue>> Evicted;
     }
+
+    public delegate void EvictedHandler<TKey, TValue>(object sender, IDictionary<TKey, TValue> evicted);
 
     public interface IInvalidator<TKey>
     { 
@@ -45,6 +50,8 @@ namespace BusterWood.Caching
         /// </remarks>
         event InvalidatedHandler<TKey> Invalidated;
     }
+
+    public delegate void InvalidatedHandler<TKey>(object sender, TKey key);
 
     /// <summary>A key to many value cache interface</summary>
     public interface IReadOnlyLookup<TKey, TValue> : IInvalidator<TKey>

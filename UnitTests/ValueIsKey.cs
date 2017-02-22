@@ -25,6 +25,7 @@ namespace UnitTests
         }
 
         public event InvalidatedHandler<TKey> Invalidated;
+        public event EvictedHandler<TKey, Maybe<TValue>> Evicted;
 
         public Maybe<TValue> Get(TKey key)
         {

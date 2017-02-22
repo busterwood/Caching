@@ -8,11 +8,13 @@ namespace BusterWood.Caching
     /// Used to prevent multiple threads calling an underlying database, or remote service, to load the value for the *same* key.
     /// Different keys are handled concurrently, but indiviual keys are read by only one thread.
     /// </summary>
+    /// <remarks>This could be useful on a client, or on the server side</remarks>
     public class ThunderingHerdProtection<TKey, TValue> : ICache<TKey, TValue>
     {
         readonly Dictionary<TKey, TaskCompletionSource<Maybe<TValue>>> _loading; // only populated keys currently being read
         readonly ICache<TKey, TValue> _dataSource;
-        readonly InvalidatedHandler<TKey> _invalidated;
+        readonly InvalidatedHandler<TKey> _dataSourceInvalidated;
+        readonly EvictedHandler<TKey, Maybe<TValue>> _dataSourceEvicted;
 
         public ThunderingHerdProtection(ICache<TKey, TValue> dataSource)
         {
@@ -20,19 +22,28 @@ namespace BusterWood.Caching
                 throw new ArgumentNullException(nameof(dataSource));
             _dataSource = dataSource;
             _loading = new Dictionary<TKey, TaskCompletionSource<Maybe<TValue>>>();
-            _invalidated = dataSource_Invalidated;
-            dataSource.Invalidated += _invalidated;
+            _dataSourceInvalidated = DataSource_Invalidated;
+            dataSource.Invalidated += _dataSourceInvalidated;
+            _dataSourceEvicted = DataSource_Evicted;
+            dataSource.Evicted += _dataSourceEvicted;
         }
 
         /// <summary>Invalidate this cache when the underlying data source notifies us of an cache invalidation</summary>
-        void dataSource_Invalidated(object sender, TKey key)
+        void DataSource_Invalidated(object sender, TKey key)
         {
             Invalidate(key);
+        }
+
+        void DataSource_Evicted(object sender, IDictionary<TKey, Maybe<TValue>> evicted)
+        {
+            Evicted?.Invoke(this, evicted);
         }
 
         public int Count => 0;
 
         public event InvalidatedHandler<TKey> Invalidated;
+
+        public event EvictedHandler<TKey, Maybe<TValue>> Evicted; // not used
 
         public void Invalidate(IEnumerable<TKey> keys)
         {
@@ -188,14 +199,12 @@ namespace BusterWood.Caching
             Maybe<TValue>[] loaded = keysToLoad.Count > 0 ? _dataSource.GetBatch(keys) : new Maybe<TValue>[0];
         }
 
-        public Task<Maybe<TValue>[]> GetBatchAsync(IReadOnlyCollection<TKey> keys)
-        {
-            throw new NotImplementedException();
-        }
+        public Task<Maybe<TValue>[]> GetBatchAsync(IReadOnlyCollection<TKey> keys) => Task.FromResult(GetBatch(keys)); // TODO: async version
 
         public void Dispose()
         {
-            _dataSource.Invalidated -= _invalidated;
+            _dataSource.Invalidated -= _dataSourceInvalidated;
+            _dataSource.Evicted -= _dataSourceEvicted;
         }
     }
 }
