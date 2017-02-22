@@ -3,7 +3,7 @@ A low memory overhead read-through cache implemented using generations.
 
 The `GenerationalCache<TKey, TValue>` is a read-though cache used for caching items read from an underlying data source.
 
-# Usage
+## Usage
 
 `GenerationalCache<TKey, TValue>` implementes the `ICache<TKey, TValue>` interface, which has the methods such as:
 * `Maybe<TValue> Get(TKey key)` tries to get a value for a key
@@ -15,13 +15,19 @@ The return type is `Maybe<TValue>` is a struct that has a value or not, much lik
 
 `ICache<TKey, TValue>` also has the following *extension* methods which may make the cache easier to consume in existing code:
 
+* `bool TryGet(TKey key, out TValue value)` tries to get a value for a key
+* `TValue GetValueOrDefault(TKey key)` tries to get a value for a key
+* `Task<TValue> GetValueOrDefaultAsync(TKey key)` tries to get a value for a key
+* `TValue[] GetBatchValueOrDefault(IReadOnlyCollection<TKey> keys)` tries to get the values associated with some keys
+* `Task<TValue[]> GetBatchValueOfDefaultAsync(IReadOnlyCollection<TKey> keys)` tries to get the values associated with some keys
+
+You can also compose caches with the following extension methods:
 * `WithGenerationalCache(int? gen0Limit, TimeSpan? timeToLive)` create a new read-through cache that has a Gen0 size limit and/or a periodic collection time
 * `WithThunderingHerdProtection()` adds ThunderingHerdProtection to a cache which prevents calling the data source concurrently *for the same key*.
-* `TryGet(TKey key, out TValue value)` tries to get a value for a key
-* `GetValueOrDefault(TKey key)` tries to get a value for a key
-* `GetValueOrDefaultAsync(TKey key)` tries to get a value for a key
-* `GetBatchValueOrDefault(IReadOnlyCollection<TKey> keys)` tries to get the values associated with some keys
-* `GetBatchValueOfDefaultAsync(IReadOnlyCollection<TKey> keys)` tries to get the values associated with some keys
+
+## Thundering Herd Protection
+
+`ThunderingHerdProtection<TKey, TValue>` can be used to prevent multiple threads calling an underlying database, or remote service, to load the value for the *same* key.  Different keys are handled concurrently, but indiviual keys are read by only one thread.
 
 ## How does it work?
 
@@ -32,7 +38,7 @@ The design is insipred by "generational garbage collection" in that:
 * when a collection happens `Gen1` is thrown away and `Gen0` is moved to `Gen1`
 * when an item is read from `Gen1` it is promted back to `Gen0`
 
-## When does a collection happen?
+### When does a collection happen?
 
 The `GenerationalMap<TKey, TValue>` contructor takes two arguments that control collection:
 
@@ -45,11 +51,11 @@ One or both parameters neeed to be set, i.e.
 * you can just specify a `timeToLive` which will let the cache grow to any size but will ensure items not used for "a long time" are evicted
 * you can specify both `gen0Limit` and `halfLife` to combine the attributes of both
 
-## Performance and Memory
+### Performance and Memory
 
 The following tests compare a generation cache with a Bit-Pseduo LRU cache.
 
-### 4 threads reading-through a total of 100,000 items
+#### 4 threads reading-through a total of 100,000 items
 | Test | Elapsed | Items in cache | Bytes allocated | Bytes held | Bytes held per key |
 | ---- | ------- | -------------- | --------------- | ---------- | ------------------ |
 | BitPseudoLru 50% | 118 ms | 50,000 | 2,973,144 | 1,519,864 | 30.40 |
@@ -57,7 +63,7 @@ The following tests compare a generation cache with a Bit-Pseduo LRU cache.
 | Generational 50ms Half-life | 25 ms | 100,000 | 6,050,996 | 3,129,228 | 31.29 |
 | Concurrent Dictionary | 11 ms | 100,000 | 5,651,692 | 2,994,008 | 29.94 |
 
-### 4 threads reading-through a total of 500,000 items
+#### 4 threads reading-through a total of 500,000 items
 | Test | Elapsed | Items in cache | Bytes allocated | Bytes held | Bytes held per key |
 | ---- | ------- | -------------- | --------------- | ---------- | ------------------ |
 | BitPseudoLru 50% | 2,062 ms | 250,000 | 9,686,520 | 6,529,452 | 26.12 |
@@ -65,6 +71,3 @@ The following tests compare a generation cache with a Bit-Pseduo LRU cache.
 | Generational 50ms Half-life | 159 ms | 331,819 | 31,131,248 | 9,617,896 | 28.99 |
 | Concurrent Dictionary | 205 ms | 500,000 | 37,960,620 | 16,607,692 | 33.22 |
 
-# Thundering Herd Protection
-
-`ThunderingHerdProtection<TKey, TValue>` can be used to prevent multiple threads calling an underlying database, or remote service, to load the value for the *same* key.  Different keys are handled concurrently, but indiviual keys are read by only one thread.
