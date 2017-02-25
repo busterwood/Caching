@@ -62,7 +62,7 @@ namespace UnitTests
             GC.KeepAlive(keys);
         }
 
-        private void ReadMixKeys(string[] keys, ICache<string, string> cache)
+        private void ReadMixKeys(string[] keys, IReadThroughCache<string, string> cache)
         {
             Task[] tasks = new Task[4];
             for (int i = 0; i < tasks.Length; i++)
@@ -74,7 +74,7 @@ namespace UnitTests
             Task.WaitAll(tasks);
         }
 
-        private void ReadMany(string[] keys, ICache<string, string> cache, int offset, int count)
+        private void ReadMany(string[] keys, IReadThroughCache<string, string> cache, int offset, int count)
         {
             for (int i = 0; i < count; i++)
             {

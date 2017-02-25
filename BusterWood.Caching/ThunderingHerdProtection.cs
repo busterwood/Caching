@@ -9,14 +9,14 @@ namespace BusterWood.Caching
     /// Different keys are handled concurrently, but indiviual keys are read by only one thread.
     /// </summary>
     /// <remarks>This could be useful on a client, or on the server side</remarks>
-    public class ThunderingHerdProtection<TKey, TValue> : ICache<TKey, TValue>
+    public class ThunderingHerdProtection<TKey, TValue> : IReadThroughCache<TKey, TValue>
     {
         readonly Dictionary<TKey, TaskCompletionSource<Maybe<TValue>>> _loading; // only populated keys currently being read
-        readonly ICache<TKey, TValue> _dataSource;
+        readonly IReadThroughCache<TKey, TValue> _dataSource;
         readonly InvalidatedHandler<TKey> _dataSourceInvalidated;
         readonly EvictedHandler<TKey, Maybe<TValue>> _dataSourceEvicted;
 
-        public ThunderingHerdProtection(ICache<TKey, TValue> dataSource)
+        public ThunderingHerdProtection(IReadThroughCache<TKey, TValue> dataSource)
         {
             if (dataSource == null)
                 throw new ArgumentNullException(nameof(dataSource));

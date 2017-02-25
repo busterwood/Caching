@@ -6,9 +6,9 @@ using System.Threading.Tasks;
 
 namespace BusterWood.Caching
 {
-    public class BitPseudoLruMap<TKey, TValue> : ICache<TKey, TValue>
+    public class BitPseudoLruMap<TKey, TValue> : IReadThroughCache<TKey, TValue>
     {
-        readonly ICache<TKey, TValue> _nextLevel;
+        readonly IReadThroughCache<TKey, TValue> _nextLevel;
         readonly object _lock;
         readonly int _capacity;
         readonly IEqualityComparer<TKey> comparer;
@@ -27,7 +27,7 @@ namespace BusterWood.Caching
             public TValue value;         // Value of entry
         }
     
-        public BitPseudoLruMap(ICache<TKey, TValue> nextLevel, int capacity)
+        public BitPseudoLruMap(IReadThroughCache<TKey, TValue> nextLevel, int capacity)
         {
             if (nextLevel == null)
                 throw new ArgumentNullException(nameof(nextLevel));

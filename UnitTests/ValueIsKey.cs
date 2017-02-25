@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 namespace UnitTests
 {
 
-    class ValueIsKey<TKey, TValue> : ICache<TKey, TValue>
+    class ValueIsKey<TKey, TValue> : IReadThroughCache<TKey, TValue>
         where TValue : TKey
     {
         public int SpinWaitCount;

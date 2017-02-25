@@ -45,7 +45,7 @@ namespace UnitTests
             string[] keys = CreateKeyStrings(items);
             var starting = GC.GetTotalMemory(true);
             sw.Start();
-            var cache = new GenerationalCache<string, string>(valueIsKey, items / 4, null);
+            var cache = new GenerationalReadThoughCache<string, string>(valueIsKey, items / 4, null);
             foreach (var key in keys)
             {
                 Assert.AreEqual(key, cache.GetValueOrDefault(key));
@@ -92,7 +92,7 @@ namespace UnitTests
             string[] keys = CreateKeyStrings(items);
             var starting = GC.GetTotalMemory(true);
             sw.Start();
-            var cache = new GenerationalCache<string, string>(valueIsKey, items / 2, null);
+            var cache = new GenerationalReadThoughCache<string, string>(valueIsKey, items / 2, null);
             foreach (var key in keys)
             {
                 Assert.AreEqual(key, cache.GetValueOrDefault(key));
@@ -115,7 +115,7 @@ namespace UnitTests
             string[] keys = CreateKeyStrings(items);
             var starting = GC.GetTotalMemory(true);
             sw.Start();
-            var cache = new GenerationalCache<string, string>(valueIsKey, null, TimeSpan.FromMilliseconds(200));
+            var cache = new GenerationalReadThoughCache<string, string>(valueIsKey, null, TimeSpan.FromMilliseconds(200));
             foreach (var key in keys)
             {
                 Assert.AreEqual(key, cache.GetValueOrDefault(key));

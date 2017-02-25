@@ -46,8 +46,9 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="BitPseudoLruMap.cs" />
-    <Compile Include="AsyncGenerationMapTests.cs" />
-    <Compile Include="GenerationMapTests.cs" />
+    <Compile Include="AsyncGenerationReadThroughCacheTests.cs" />
+    <Compile Include="GenerationalCacheTests.cs" />
+    <Compile Include="GenerationalReadThroughCacheTests.cs" />
     <Compile Include="ThunderingHerdOverheadTests.cs" />
     <Compile Include="MixedReadWriteOverheadTests.cs" />
     <Compile Include="PerformaceMonitor.cs" />
