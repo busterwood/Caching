@@ -4,7 +4,6 @@ using System.Threading.Tasks;
 
 namespace BusterWood.Caching
 {
-    
     /// <summary>
     /// A cache map that uses generations to cache to minimize the per-key overhead.
     /// A collection releases all items in Gen1 and moves Gen0 -> Gen1.  Reading an item in Gen1 promotes the item back to Gen0.
@@ -41,19 +40,7 @@ namespace BusterWood.Caching
         {
             Invalidate(key);
         }
-
-        /// <summary>The number of items in this cache</summary>
-        public int Count
-        {
-            get
-            {
-                lock(_lock)
-                {
-                    return _gen0.Count + (_gen1?.Count).GetValueOrDefault();
-                }                
-            }
-        }
-
+        
         /// <summary>Tries to get a value for a key</summary>
         /// <param name="key">The key to find</param>
         /// <returns>The <see cref="M:BusterWood.Caching.Maybe.Some``1(``0)" /> if the item was found in the this cache or the underlying data source, otherwise <see cref="M:BusterWood.Caching.Maybe.None``1" /></returns>
@@ -143,14 +130,13 @@ namespace BusterWood.Caching
             }            
         }
 
-        // don't create a new dictionary if both generations are empty
-        protected override bool SkipCollection() => _gen0.Count == 0 && (_gen1?.Count).GetValueOrDefault() == 0;
+        protected override int CountCore() => _gen0.Count + (_gen1?.Count).GetValueOrDefault();
 
         protected override void CollectCore()
         {
             if ((_gen1?.Count).GetValueOrDefault() > 0)
             {
-                EvictionCount += (_gen1?.Count).GetValueOrDefault();
+                EvictionCount += _gen1.Count;
                 Evicted?.Invoke(this, _gen1);
             }
             _gen1 = _gen0; // Gen1 items are dropped from the cache at this point

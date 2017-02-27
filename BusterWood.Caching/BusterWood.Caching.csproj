@@ -41,6 +41,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="CacheExtensions.cs" />
+    <Compile Include="ConcurrentGeneralationalCache.cs" />
     <Compile Include="DictionaryExtensions.cs" />
     <Compile Include="GenerationalBase.cs" />
     <Compile Include="GenerationalCache.cs" />

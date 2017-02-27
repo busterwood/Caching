@@ -8,6 +8,9 @@ namespace BusterWood.Caching
         internal Dictionary<TKey, TValue> _gen0; // internal for test visibility
         internal Dictionary<TKey, TValue> _gen1; // internal for test visibility
 
+        /// <summary>Create a new cache that has a Gen0 size limit and/or a periodic collection time</summary>
+        /// <param name="gen0Limit">(Optional) limit on the number of items allowed in Gen0 before a collection</param>
+        /// <param name="timeToLive">(Optional) time period after which a unread item is evicted from the cache</param>
         public GenerationalCache(int? gen0Limit, TimeSpan? timeToLive) : base(gen0Limit, timeToLive)
         {
             _gen0 = new Dictionary<TKey, TValue>();
@@ -72,13 +75,13 @@ namespace BusterWood.Caching
 
         bool Gen0LimitReached() => _gen0.Count >= Gen0Limit;
 
-        protected override bool SkipCollection() => _gen0.Count == 0 && (_gen1?.Count).GetValueOrDefault() == 0;
+        protected override int CountCore() => _gen0.Count + (_gen1?.Count).GetValueOrDefault();
 
         protected override void CollectCore()
         {
             if ((_gen1?.Count).GetValueOrDefault() > 0)
             {
-                EvictionCount += (_gen1?.Count).GetValueOrDefault();
+                EvictionCount += _gen1.Count;
                 Evicted?.Invoke(this, _gen1);
             }
             _gen1 = _gen0; // Gen1 items are dropped from the cache at this point

@@ -23,6 +23,18 @@ namespace BusterWood.Caching
         /// <summary>Period of time after which a unread item is evicted from the cache</summary>
         public TimeSpan? TimetoLive { get; }
 
+        /// <summary>The number of items in this cache</summary>
+        public int Count
+        {
+            get
+            {
+                lock (_lock)
+                {
+                    return CountCore();
+                }
+            }
+        }
+
         public event InvalidatedHandler<TKey> Invalidated;
 
         public GenerationalBase(int? gen0Limit, TimeSpan? timeToLive)
@@ -41,6 +53,7 @@ namespace BusterWood.Caching
                 _periodicCollect = PeriodicCollection(timeToLive.Value.TotalMilliseconds / 2);
         }
 
+        /// <summary>Collect now and again</summary>
         async Task PeriodicCollection(double ms)
         {
             var period = TimeSpan.FromMilliseconds(ms);
@@ -71,7 +84,7 @@ namespace BusterWood.Caching
 
         protected void Collect()
         {
-            if (_stop || SkipCollection())
+            if (_stop || CountCore() == 0)
                 return;
 
             CollectCore();
@@ -79,9 +92,10 @@ namespace BusterWood.Caching
             _lastCollection = DateTime.UtcNow;
         }
 
-        protected abstract bool SkipCollection();
-
         protected abstract void CollectCore();
+
+        /// <summary>Gets the number of items currently being cached</summary>
+        protected abstract int CountCore();
 
         public virtual void Dispose()
         {
