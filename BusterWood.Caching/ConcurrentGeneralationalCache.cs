@@ -7,6 +7,7 @@ namespace BusterWood.Caching
     public class ConcurrentGeneralationalCache<TKey, TValue> : ICache<TKey, TValue>
     {
         readonly GenerationalCache<TKey, TValue>[] _partitions;
+        readonly int _partitionCount;
 
         /// <summary>Allows a consumer to be notified when a entry has been removed from the cache by one of the <see cref="Invalidate(TKey)"/> methods</summary>
         public event InvalidatedHandler<TKey> Invalidated;
@@ -22,6 +23,7 @@ namespace BusterWood.Caching
             else if (partitions < 1)
                 throw new ArgumentOutOfRangeException(nameof(partitions), partitions, "Must be one or more");
 
+            _partitionCount = partitions;
             _partitions = new GenerationalCache<TKey, TValue>[partitions];
             for (int i = 0; i < partitions; i++)
             {
@@ -66,11 +68,25 @@ namespace BusterWood.Caching
             _partitions[idx].Set(key, value);
         }
 
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         int PartitionIndex(TKey key)
         {
-            int positiveHashCode = key.GetHashCode() & ~int.MinValue; 
-            //TODO: spreader function?
-            return positiveHashCode % _partitions.Length;
+            int positiveHashCode = key.GetHashCode() & ~int.MinValue;
+            // the following optimizes the modulus (IDIV) instruction for the common cases, as IDIV takes 60-80 clock cycles
+            if (_partitionCount == 1)
+                return 0;
+            if (_partitionCount == 2)
+                return positiveHashCode & 3;
+            if (_partitionCount == 4)
+                return positiveHashCode & 7;
+            if (_partitionCount == 8)
+                return positiveHashCode & 15;
+            if (_partitionCount == 16)
+                return positiveHashCode & 31;
+            if (_partitionCount == 32)
+                return positiveHashCode & 63;
+            else
+                return positiveHashCode % _partitionCount;            
         }
     }
 }
