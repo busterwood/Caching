@@ -107,10 +107,7 @@ namespace BusterWood.Caching
             return maybe;
         }
 
-        static TaskCompletionSource<Maybe<TValue>> NewTcs(TKey key)
-        {
-            return new TaskCompletionSource<Maybe<TValue>>(TaskCreationOptions.RunContinuationsAsynchronously);
-        }
+        static TaskCompletionSource<Maybe<TValue>> NewTcs(TKey key) => new TaskCompletionSource<Maybe<TValue>>(TaskCreationOptions.RunContinuationsAsynchronously);
 
         public Maybe<TValue>[] GetBatch(IReadOnlyCollection<TKey> keys)
         {
