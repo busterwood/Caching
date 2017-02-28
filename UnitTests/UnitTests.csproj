@@ -53,6 +53,7 @@
     <Compile Include="ThunderingHerdOverheadTests.cs" />
     <Compile Include="MixedReadWriteOverheadTests.cs" />
     <Compile Include="PerformaceMonitor.cs" />
+    <Compile Include="ThunderingHerdProtectionTests.cs" />
     <Compile Include="ValueIsKey.cs" />
     <Compile Include="WriteOnlyOverheadTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

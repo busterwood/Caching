@@ -107,8 +107,6 @@ namespace BusterWood.Caching
             return maybe;
         }
 
-        static TaskCompletionSource<Maybe<TValue>> NewTcs(TKey key) => new TaskCompletionSource<Maybe<TValue>>(TaskCreationOptions.RunContinuationsAsynchronously);
-
         public Maybe<TValue>[] GetBatch(IReadOnlyCollection<TKey> keys)
         {
             var batch = WorkOutWhatNeedsToBeLoaded(keys);
@@ -120,11 +118,16 @@ namespace BusterWood.Caching
             Maybe<TValue>[] loaded = _dataSource.GetBatch(keys);
 
             SetAllCompletionSources(batch.TaskCompletionSources, loaded);
+            RemoveAllKeys(keys);
+            return loaded;
+        }
+
+        void RemoveAllKeys(IReadOnlyCollection<TKey> keys)
+        {
             lock (_loading)
             {
                 _loading.RemoveAll(keys);
             }
-            return loaded;
         }
 
         BatchLoad WorkOutWhatNeedsToBeLoaded(IReadOnlyCollection<TKey> keys)
@@ -147,6 +150,8 @@ namespace BusterWood.Caching
             }
             return new BatchLoad(tcs, alreadyLoading, toLoadCount);
         }
+
+        static TaskCompletionSource<Maybe<TValue>> NewTcs(TKey key) => new TaskCompletionSource<Maybe<TValue>>(TaskCreationOptions.RunContinuationsAsynchronously);
 
         struct BatchLoad
         {
@@ -176,24 +181,49 @@ namespace BusterWood.Caching
 
         private Maybe<TValue>[] TryGetBatchMixed(IReadOnlyCollection<TKey> keys, BatchLoad batch)
         {
-            throw new NotImplementedException();
-
             // construct a list of keys to load
             var keysToLoad = new List<TKey>(batch.ToLoadCount);
             var originalIndexes = new List<int>(batch.ToLoadCount);
-            int j = 0;
+            int i = 0;
             foreach (var key in keys)
             {
-                if (!batch.AlreadyLoading[j])
+                if (!batch.AlreadyLoading[i])
                 {
                     keysToLoad.Add(key);
-                    originalIndexes.Add(j);
+                    originalIndexes.Add(i);
                 }
-                j++;
+                i++;
             }
 
             // the following line may block
-            Maybe<TValue>[] loaded = keysToLoad.Count > 0 ? _dataSource.GetBatch(keys) : new Maybe<TValue>[0];
+            Maybe<TValue>[] loaded = keysToLoad.Count > 0 ? _dataSource.GetBatch(keysToLoad) : new Maybe<TValue>[0];
+
+            // set the results of the all the TCS we added
+            i = 0;
+            foreach (var l in loaded)
+            {
+                int idx = originalIndexes[i];
+                batch.TaskCompletionSources[idx].TrySetResult(l);
+                i++;
+            }
+
+            // remove all keys that we loaded
+            RemoveAllKeys(keysToLoad);
+
+            // construct results from TCS results
+            return ResultsFromBatchTCS(keys, batch);
+        }
+
+        static Maybe<TValue>[] ResultsFromBatchTCS(IReadOnlyCollection<TKey> keys, BatchLoad batch)
+        {
+            var results = new Maybe<TValue>[keys.Count];
+            int i = 0;
+            foreach (var tcs in batch.TaskCompletionSources)
+            {
+                results[i] = tcs.Task.Result;
+                i++;
+            }
+            return results;
         }
 
         public Task<Maybe<TValue>[]> GetBatchAsync(IReadOnlyCollection<TKey> keys) => Task.FromResult(GetBatch(keys)); // TODO: async version
