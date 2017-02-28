@@ -4,7 +4,7 @@ using System.Collections.Generic;
 namespace BusterWood.Caching
 {
     /// <summary>A concurrent version of the <see cref="GenerationalCache{TKey, TValue}"/> that uses a number of smaller caches to provide concurrent read and modification</summary>
-    public class ConcurrentGeneralationalCache<TKey, TValue> : ICache<TKey, TValue>
+    public class ConcurrentGenerationalCache<TKey, TValue> : ICache<TKey, TValue>
     {
         readonly GenerationalCache<TKey, TValue>[] _partitions;
         readonly int _partitionCount;
@@ -16,7 +16,7 @@ namespace BusterWood.Caching
         /// <param name="gen0Limit">(Optional) limit on the number of items allowed in Gen0 before a collection</param>
         /// <param name="timeToLive">(Optional) time period after which a unread item is evicted from the cache</param>
         /// <param name="partitions">The number of paritions to split the cache into, defaults to <see cref="Environment.ProcessorCount"/></param>
-        public ConcurrentGeneralationalCache(int? gen0Limit, TimeSpan? timeToLive, int partitions = 0)
+        public ConcurrentGenerationalCache(int? gen0Limit, TimeSpan? timeToLive, int partitions = 0)
         {
             if (partitions == 0)
                 partitions = Environment.ProcessorCount;
@@ -32,10 +32,31 @@ namespace BusterWood.Caching
             }
         }
 
+        internal void ForceCollect()
+        {
+            foreach (var p in _partitions)
+            {
+                p.ForceCollect();
+            }
+        }
+
         /// <summary>Bubble up the invalidation event</summary>
         void Partition_Invalidated(object sender, TKey key)
         {
             Invalidated?.Invoke(sender, key);
+        }
+
+        public int Count
+        {
+            get
+            {
+                int count = 0;
+                foreach (var p in _partitions)
+                {
+                    count += p.Count;
+                }
+                return count;
+            }
         }
 
         /// <summary>Tries to get a value for a key</summary>

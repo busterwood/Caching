@@ -1,11 +1,10 @@
-﻿using BusterWood.Caching;
-using NUnit.Framework;
+﻿using NUnit.Framework;
 using System;
+using BusterWood.Caching;
 
 namespace UnitTests
 {
-    [TestFixture]
-    public class GenerationalCacheTests
+    public class ConcurrentGenerationalCacheTests
     {
         [Test]
         public void empty_cache_has_count_of_zero()
@@ -65,6 +64,7 @@ namespace UnitTests
             Assert.AreEqual(0, c.Count, "Count");
         }
 
-        static GenerationalCache<int, string> NewCache(int gen0 = 10, TimeSpan? ttl = null) => new GenerationalCache<int, string>(gen0, ttl);
+        static ConcurrentGenerationalCache<int, string> NewCache(int gen0 = 10, TimeSpan? ttl = null) => new ConcurrentGenerationalCache<int, string>(gen0, ttl);
+
     }
 }
