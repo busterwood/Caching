@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<package >
+  <metadata>
+    <id>BusterWood.Caching</id>
+    <version>0.9.0</version>
+    <authors>BusterWood</authors>
+    <description>A cache-aside and read though cache with optional thundering herd protection.</description>
+    <projectUrl>https://github.com/busterwood/Caching</projectUrl>
+    <licenseUrl>https://github.com/busterwood/Caching/blob/master/LICENSE.txt</licenseUrl>
+    <references>
+      <reference file="BusterWood.Caching.dll" />
+    </references>
+    <frameworkAssemblies>
+      <frameworkAssembly assemblyName="System" targetFramework="net46" />
+    </frameworkAssemblies>
+  </metadata>
+  <files>
+    <file src="Bin\Release\BusterWood.Caching.dll" target="lib\net45"/>
+  </files>
+</package>

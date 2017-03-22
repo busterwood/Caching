@@ -50,10 +50,12 @@
     <Compile Include="GenerationalReadThoughCache.cs" />
     <Compile Include="Maybe.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="ReadThroughCache.cs" />
     <Compile Include="ThunderingHerdProtection.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="caching.snk" />
+    <None Include="BusterWood.Caching.nuspec" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
