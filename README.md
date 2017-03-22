@@ -1,3 +1,5 @@
+[![Nuget](https://img.shields.io/nuget/v/BusterWood.Caching.svg)](https://www.nuget.org/packages/BusterWood.Caching)
+
 # Caching
 A low memory overhead read-through cache implemented using generations.
 
