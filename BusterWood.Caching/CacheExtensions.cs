@@ -30,7 +30,7 @@ namespace BusterWood.Caching
         /// <param name="cache">The underlying cache to load data from</param>
         /// <param name="gen0Limit">(Optional) limit on the number of items allowed in Gen0 before a collection</param>
         /// <param name="timeToLive">(Optional) time period after which a unread item is evicted from the cache</param>
-        public static IReadThroughCache<TKey, TValue> WithGenerationalCache<TKey, TValue>(this IReadThroughCache<TKey, TValue> cache, int? gen0Limit, TimeSpan? timeToLive)
+        public static GenerationalReadThoughCache<TKey, TValue> WithGenerationalCache<TKey, TValue>(this IReadThroughCache<TKey, TValue> cache, int? gen0Limit, TimeSpan? timeToLive)
         {
             return new GenerationalReadThoughCache<TKey, TValue>(cache, gen0Limit, timeToLive);
         }

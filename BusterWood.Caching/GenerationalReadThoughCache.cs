@@ -17,8 +17,7 @@ namespace BusterWood.Caching
         readonly InvalidatedHandler<TKey> _invalidated; // needed so we can properly dispose of event
         int _version;       // used to detect other threads modifying the cache
 
-        public event EvictedHandler<TKey, Maybe<TValue>> Evicted;
-
+    
         /// <summary>Create a new read-through cache that has a Gen0 size limit and/or a periodic collection time</summary>
         /// <param name="dataSource">The underlying source to load data from</param>
         /// <param name="gen0Limit">(Optional) limit on the number of items allowed in Gen0 before a collection</param>
@@ -40,6 +39,8 @@ namespace BusterWood.Caching
         {
             Invalidate(key);
         }
+
+        public event EvictedHandler<TKey, Maybe<TValue>> Evicted;
 
         /// <summary>Adds a key and value to the cache without checking the underlying data source</summary>
         /// <exception cref="ArgumentException">Thrown if the key already exists</exception>

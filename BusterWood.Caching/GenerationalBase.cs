@@ -11,6 +11,8 @@ namespace BusterWood.Caching
         volatile bool _stop;    // stop the periodic collection
         DateTime _lastCollection; // stops a periodic collection running if a size limit collection as happened since the last periodic GC
 
+        public object SyncRoot => _lock;
+
         /// <summary>the total number of collections</summary>
         public int CollectionCount { get; private set; }
 
@@ -74,7 +76,7 @@ namespace BusterWood.Caching
             }
         }
 
-        internal void ForceCollect()
+        public void ForceCollect()
         {
             lock (_lock)
             {
