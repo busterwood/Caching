@@ -40,6 +40,11 @@ namespace BusterWood.Caching
 
         public virtual Task<Maybe<TValue>[]> GetBatchAsync(IReadOnlyCollection<TKey> keys) => Task.Run(() => GetBatch(keys));
 
+        public virtual void InvalidateAll()
+        {
+            // nothing to do
+        }
+
         public virtual void Invalidate(IEnumerable<TKey> keys)
         {
             foreach (var k in keys)

@@ -45,6 +45,11 @@ namespace BusterWood.Caching
 
         public event EvictedHandler<TKey, Maybe<TValue>> Evicted; // not used
 
+        public void InvalidateAll()
+        {
+            // nothing to do
+        }
+
         public void Invalidate(IEnumerable<TKey> keys)
         {
             foreach (var k in keys)
@@ -126,7 +131,7 @@ namespace BusterWood.Caching
         {
             lock (_loading)
             {
-                _loading.RemoveAll(keys);
+                _loading.RemoveRange(keys);
             }
         }
 

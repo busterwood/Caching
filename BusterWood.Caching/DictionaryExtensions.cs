@@ -30,12 +30,30 @@ namespace BusterWood.Caching
             }
         }
 
-        public static void RemoveAll<TKey, TValue>(this Dictionary<TKey, TValue> dictionary, IEnumerable<TKey> keys)
+        public static void RemoveRange<TKey, TValue>(this Dictionary<TKey, TValue> dictionary, IEnumerable<TKey> keys)
         {
             foreach (var k in keys)
             {
                 dictionary.Remove(k);
             }
         }
+
+        public static void AddRange<TKey, TValue>(this Dictionary<TKey, TValue> dictionary, IEnumerable<KeyValuePair<TKey, TValue>> items)
+        {
+            foreach (var pair in items)
+            {
+                dictionary.Add(pair.Key, pair.Value);
+            }
+        }
+
+        public static void AddRange<TKey, TValue>(this Dictionary<TKey, TValue> dictionary, IEnumerable<KeyValuePair<TKey, Maybe<TValue>>> items)
+        {
+            foreach (var pair in items)
+            {
+                if (pair.Value.HasValue)
+                    dictionary.Add(pair.Key, pair.Value.Value);
+            }
+        }
+
     }
 }

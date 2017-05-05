@@ -40,10 +40,36 @@ namespace BusterWood.Caching
         {
             Invalidate(key);
         }
-        
+
+        /// <summary>Adds a key and value to the cache without checking the underlying data source</summary>
+        /// <exception cref="ArgumentException">Thrown if the key already exists</exception>
+        public void Add(TKey key, TValue value)
+        {
+            lock (_lock)
+            {
+                Maybe<TValue> result;
+                if (TryGetAnyGen(key, out result))
+                    throw new ArgumentException($"Cannot add duplicate key '{key}'");
+                AddToGen0(key, Maybe.Some(value));
+            }
+        }
+
+        /// <summary>Returns a dictionary containing all the keys and values currently in the cache</summary>
+        public Dictionary<TKey, TValue> SnapshotValues()
+        {
+            lock (_lock)
+            {
+                var result = new Dictionary<TKey, TValue>(CountCore());
+                result.AddRange(_gen0);
+                if (_gen1 != null)
+                    result.AddRange(_gen1);
+                return result;
+            }
+        }
+
         /// <summary>Tries to get a value for a key</summary>
         /// <param name="key">The key to find</param>
-        /// <returns>The <see cref="M:BusterWood.Caching.Maybe.Some``1(``0)" /> if the item was found in the this cache or the underlying data source, otherwise <see cref="M:BusterWood.Caching.Maybe.None``1" /></returns>
+        /// <returns>The <see cref="Maybe.Some{T}(T)" /> if the item was found in the this cache or the underlying data source, otherwise <see cref="Maybe.None{T}" /></returns>
         public Maybe<TValue> Get(TKey key)
         {
             Maybe<TValue> result;
@@ -260,8 +286,25 @@ namespace BusterWood.Caching
 
         protected override void InvalidateCore(TKey key)
         {
-            if (_gen0.Remove(key) || _gen1.Remove(key))
+            if (_gen0.Remove(key) || _gen1?.Remove(key) == true)
                 OnInvalidated(key);
+        }
+
+        public override void InvalidateAll()
+        {
+            lock (_lock)
+            {
+                foreach (var key in _gen0.Keys)
+                    OnInvalidated(key);
+                _gen0.Clear();
+
+                if (_gen1 != null)
+                {
+                    foreach (var key in _gen1.Keys)
+                        OnInvalidated(key);
+                    _gen1.Clear();
+                }
+            }
         }
 
     }

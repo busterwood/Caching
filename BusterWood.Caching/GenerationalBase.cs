@@ -130,5 +130,8 @@ namespace BusterWood.Caching
         {
             Invalidated?.Invoke(this, key);
         }
+
+        public abstract void InvalidateAll();
+
     }
 }

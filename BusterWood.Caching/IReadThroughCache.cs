@@ -36,7 +36,10 @@ namespace BusterWood.Caching
     public delegate void EvictedHandler<TKey, TValue>(object sender, IDictionary<TKey, TValue> evicted);
 
     public interface IInvalidator<TKey>
-    { 
+    {
+        /// <summary>Removes all items from the cache, raising the <see cref="Invalidated"/> event for each item</summary>
+        void InvalidateAll();
+
         /// <summary>Removes a <param name="key"/> (and value) from the cache, if it exists.</summary>
         void Invalidate(TKey key);
 

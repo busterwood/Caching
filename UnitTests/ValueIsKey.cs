@@ -81,5 +81,10 @@ namespace UnitTests
         {
             throw new NotImplementedException();
         }
+
+        public void InvalidateAll()
+        {
+            throw new NotImplementedException();
+        }
     }
 }

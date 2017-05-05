@@ -68,6 +68,14 @@ namespace BusterWood.Caching
             return _partitions[idx].Get(key);
         }
 
+        public void InvalidateAll()
+        {
+            foreach (var part in _partitions)
+            {
+                part.InvalidateAll();
+            }
+        }
+
         /// <summary>Removes a a number of <paramref name="keys" /> (and value) from the cache, if it exists.</summary>
         public void Invalidate(IEnumerable<TKey> keys)
         {
@@ -109,5 +117,6 @@ namespace BusterWood.Caching
             else
                 return positiveHashCode % _partitionCount;            
         }
-    }
+
+   }
 }
