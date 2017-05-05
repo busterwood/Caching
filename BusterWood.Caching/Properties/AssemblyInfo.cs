@@ -29,6 +29,6 @@ using System.Runtime.InteropServices;
 // by using the '*' as shown below:
 // [assembly: AssemblyVersion("1.0.*")]
 [assembly: AssemblyVersion("1.0.0.0")]
-[assembly: AssemblyFileVersion("0.11.0")]
+[assembly: AssemblyFileVersion("0.11.1")]
 
 [assembly: InternalsVisibleTo("UnitTests, PublicKey=0024000004800000940000000602000000240000525341310004000001000100959cd4a49d1396bcfe0f0acd55260e489ad203c7592890919099627cb02dad9eba8220bf669681227fe46ac0293e234598e223739b2e13aa9773836a760bcec534feddb8aa28cfedc5c8b435a5a051f0b77355295c63969f3c3869ed87f844df3efad4047568b155748b0a18e9aa834669e9eb373b2e132f245be520fb4ced92")]

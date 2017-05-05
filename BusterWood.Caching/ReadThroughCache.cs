@@ -38,7 +38,16 @@ namespace BusterWood.Caching
             return results;
         }
 
-        public virtual Task<Maybe<TValue>[]> GetBatchAsync(IReadOnlyCollection<TKey> keys) => Task.Run(() => GetBatch(keys));
+        public async virtual Task<Maybe<TValue>[]> GetBatchAsync(IReadOnlyCollection<TKey> keys)
+        {
+            var results = new Maybe<TValue>[keys.Count];
+            int i = 0;
+            foreach (var key in keys)
+            {
+                results[i++] = await GetAsync(key);
+            }
+            return results;
+        }
 
         public virtual void InvalidateAll()
         {
