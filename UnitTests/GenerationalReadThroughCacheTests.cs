@@ -72,6 +72,18 @@ namespace UnitTests
         }
 
         [Test]
+        public void eviction_raises_event_with_evicted_items()
+        {
+            var cache = new GenerationalReadThoughCache<int, int>(new ValueIsKey<int, int>(), 10, null);
+            IDictionary<int, Maybe<int>> evicted = null;
+            Assert.AreEqual(1, cache.GetValueOrDefault(1));
+            cache.Evicted += (sender, key) => evicted = key;
+            cache.Clear();
+            Assert.AreEqual(1, evicted.Count, "Evicted");
+            Assert.AreEqual(0, cache.Count, "Cache");
+        }
+
+        [Test]
         public void batch_load_reads_from_underlying_datasource_when_key_not_in_cache()
         {
             var cache = new GenerationalReadThoughCache<int, int>(new ValueIsKey<int, int>(), 10, null);

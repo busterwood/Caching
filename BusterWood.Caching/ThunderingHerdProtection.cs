@@ -45,9 +45,9 @@ namespace BusterWood.Caching
 
         public event EvictedHandler<TKey, Maybe<TValue>> Evicted; // not used
 
-        public void InvalidateAll()
+        public void Clear()
         {
-            // nothing to do
+            _dataSource.Clear();
         }
 
         public void Invalidate(IEnumerable<TKey> keys)

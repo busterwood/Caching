@@ -377,7 +377,7 @@ namespace BusterWood.Caching
             throw new NotImplementedException();
         }
 
-        public void InvalidateAll()
+        public void Clear()
         {
             throw new NotImplementedException();
         }

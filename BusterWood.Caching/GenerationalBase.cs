@@ -76,7 +76,17 @@ namespace BusterWood.Caching
             }
         }
 
-        public void ForceCollect()
+        public void Clear()
+        {
+            lock (_lock)
+            {
+                // two generations, so collect twice to fully clear
+                Collect();
+                Collect();
+            }
+        }
+
+        internal void ForceCollect()
         {
             lock (_lock)
             {
@@ -132,8 +142,6 @@ namespace BusterWood.Caching
         {
             Invalidated?.Invoke(this, key);
         }
-
-        public abstract void InvalidateAll();
 
     }
 }

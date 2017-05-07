@@ -48,12 +48,7 @@ namespace BusterWood.Caching
             }
             return results;
         }
-
-        public virtual void InvalidateAll()
-        {
-            // nothing to do
-        }
-
+        
         public virtual void Invalidate(IEnumerable<TKey> keys)
         {
             foreach (var k in keys)
@@ -63,6 +58,11 @@ namespace BusterWood.Caching
         public virtual void Invalidate(TKey key)
         {
             Invalidated?.Invoke(this, key);
+        }
+
+        public void Clear()
+        {
+            // nothing to do
         }
     }
 }

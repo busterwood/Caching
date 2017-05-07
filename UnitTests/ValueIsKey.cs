@@ -82,7 +82,7 @@ namespace UnitTests
             throw new NotImplementedException();
         }
 
-        public void InvalidateAll()
+        public void Clear()
         {
             throw new NotImplementedException();
         }

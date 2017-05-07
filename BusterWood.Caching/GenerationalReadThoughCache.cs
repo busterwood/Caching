@@ -291,22 +291,6 @@ namespace BusterWood.Caching
                 OnInvalidated(key);
         }
 
-        public override void InvalidateAll()
-        {
-            lock (_lock)
-            {
-                foreach (var key in _gen0.Keys)
-                    OnInvalidated(key);
-                _gen0.Clear();
-
-                if (_gen1 != null)
-                {
-                    foreach (var key in _gen1.Keys)
-                        OnInvalidated(key);
-                    _gen1.Clear();
-                }
-            }
-        }
 
     }
 }

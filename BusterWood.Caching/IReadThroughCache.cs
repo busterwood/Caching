@@ -9,6 +9,8 @@ namespace BusterWood.Caching
     {
         int Count { get; }
 
+        void Clear();
+
         /// <summary>Tries to get a value for a key</summary>
         /// <param name="key">The key to find</param>
         /// <returns>The <see cref="Maybe.Some{TKey}(TKey)"/> if the item was found in the this cache or the underlying data source, otherwise <see cref="Maybe.None{TKey}"/></returns>
@@ -37,9 +39,6 @@ namespace BusterWood.Caching
 
     public interface IInvalidator<TKey>
     {
-        /// <summary>Removes all items from the cache, raising the <see cref="Invalidated"/> event for each item</summary>
-        void InvalidateAll();
-
         /// <summary>Removes a <param name="key"/> (and value) from the cache, if it exists.</summary>
         void Invalidate(TKey key);
 

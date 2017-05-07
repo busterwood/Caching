@@ -68,11 +68,11 @@ namespace BusterWood.Caching
             return _partitions[idx].Get(key);
         }
 
-        public void InvalidateAll()
+        public void Clear()
         {
             foreach (var part in _partitions)
             {
-                part.InvalidateAll();
+                part.Clear();
             }
         }
 
