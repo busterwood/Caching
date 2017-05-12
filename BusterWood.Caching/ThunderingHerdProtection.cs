@@ -79,12 +79,18 @@ namespace BusterWood.Caching
             // call the data source to load it
             var maybe = _dataSource.Get(key); // blocks
 
-            tcs.SetResult(maybe); // tell any waiting threads the loaded value
+            Complete(tcs, maybe);
             lock (_loading)
             {
                 _loading.Remove(key);
             }
             return maybe;
+        }
+
+        static void Complete(TaskCompletionSource<Maybe<TValue>> tcs, Maybe<TValue> maybe)
+        {
+            // create the TCS with Run Continuations Async on 4.6
+            Task.Run(() => tcs.SetResult(maybe)); // tell any waiting threads the loaded value
         }
 
         public async Task<Maybe<TValue>> GetAsync(TKey key)
@@ -104,7 +110,7 @@ namespace BusterWood.Caching
             // call the data source to load it
             var maybe = await _dataSource.GetAsync(key);
 
-            tcs.SetResult(maybe);
+            Complete(tcs, maybe);
             lock (_loading)
             {
                 _loading.Remove(key);
@@ -156,7 +162,7 @@ namespace BusterWood.Caching
             return new BatchLoad(tcs, alreadyLoading, toLoadCount);
         }
 
-        static TaskCompletionSource<Maybe<TValue>> NewTcs(TKey key) => new TaskCompletionSource<Maybe<TValue>>(TaskCreationOptions.RunContinuationsAsynchronously);
+        static TaskCompletionSource<Maybe<TValue>> NewTcs(TKey key) => new TaskCompletionSource<Maybe<TValue>>();
 
         struct BatchLoad
         {
@@ -179,7 +185,7 @@ namespace BusterWood.Caching
             int j = 0;
             foreach (var tcs in taskCompletionSources)
             {
-                tcs.SetResult(loaded[j]);
+                Complete(tcs, loaded[j]);
                 j++;
             }
         }
@@ -208,7 +214,7 @@ namespace BusterWood.Caching
             foreach (var l in loaded)
             {
                 int idx = originalIndexes[i];
-                batch.TaskCompletionSources[idx].TrySetResult(l);
+                Task.Run(() => batch.TaskCompletionSources[idx].TrySetResult(l));
                 i++;
             }
 

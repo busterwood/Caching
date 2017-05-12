@@ -23,7 +23,7 @@ namespace BusterWood.Caching
         /// <param name="gen0Limit">(Optional) limit on the number of items allowed in Gen0 before a collection</param>
         /// <param name="timeToLive">(Optional) time period after which a unread item is evicted from the cache</param>
         public GenerationalReadThoughCache(IReadThroughCache<TKey, TValue> dataSource, int? gen0Limit, TimeSpan? timeToLive)
-            :base(gen0Limit, timeToLive)
+            : base(gen0Limit, timeToLive)
         {
             if (dataSource == null)
                 throw new ArgumentNullException(nameof(dataSource));
@@ -290,7 +290,6 @@ namespace BusterWood.Caching
             if (_gen0.Remove(key) || _gen1?.Remove(key) == true)
                 OnInvalidated(key);
         }
-
 
     }
 }
