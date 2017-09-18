@@ -6,7 +6,7 @@ namespace BusterWood.Caching
 {
     /// <summary>
     /// Used to prevent multiple threads calling an underlying database, or remote service, to load the value for the *same* key.
-    /// Different keys are handled concurrently, but indiviual keys are read by only one thread.
+    /// Different keys are handled concurrently, but individual keys are read by only one thread.
     /// </summary>
     /// <remarks>This could be useful on a client, or on the server side</remarks>
     public class ThunderingHerdProtection<TKey, TValue> : IReadThroughCache<TKey, TValue>
