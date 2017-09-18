@@ -44,11 +44,11 @@ The design is insipred by "generational garbage collection" in that:
 * when a collection happens `Gen1` is thrown away and `Gen0` is moved to `Gen1`
 * when an item is read from `Gen1` it is promted back to `Gen0`
 
-Internally, `GenerationalReadThroughCachee<TKey, TValue>` uses a lock (Monitor) to protect it's data structures, but the lock is released if a read to the underlying data source is required.
+Internally, `GenerationalReadThroughCache<TKey, TValue>` uses a lock (Monitor) to protect it's data structures, but the lock is released if a read to the underlying data source is required.
 
 ### When does a collection happen?
 
-The `GenerationalReadThroughCachee<TKey, TValue>` contructor takes two arguments that control collection:
+The `GenerationalReadThroughCache<TKey, TValue>` contructor takes two arguments that control collection:
 
 * if a `gen0Limit` is set then a collection will occur when `Gen0` reaches that limit
 * if `timeToLive` is set then a an un-read entry will be evicted some time after this (unless the `gen0Limit` was reached since the last collection)
@@ -61,7 +61,7 @@ One or both parameters neeed to be set, i.e.
 
 ### What is cached?
 
-`GenerationalReadThroughCachee<TKey, TValue>` remembers the results of all read-though operations, so it records the value for a key or it records that a *key does not have a value*.
+`GenerationalReadThroughCache<TKey, TValue>` remembers the results of all read-though operations, so it records the value for a key or it records that a *key does not have a value*.
 
 ### Performance and Memory
 
