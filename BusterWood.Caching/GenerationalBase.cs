@@ -1,12 +1,11 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace BusterWood.Caching
 {
-    public abstract class GenerationalBase<TKey> : IInvalidator<TKey>
+    public abstract class GenerationalBase<TKey> : IDisposable
     {
-        protected readonly object _lock;
+        readonly object _lock;
         readonly Task _periodicCollect;
         volatile bool _stop;    // stop the periodic collection
         DateTime _lastCollection; // stops a periodic collection running if a size limit collection as happened since the last periodic GC
@@ -36,8 +35,6 @@ namespace BusterWood.Caching
                 }
             }
         }
-
-        public event InvalidatedHandler<TKey> Invalidated;
 
         public GenerationalBase(int? gen0Limit, TimeSpan? timeToLive)
         {
@@ -112,35 +109,6 @@ namespace BusterWood.Caching
         public virtual void Dispose()
         {
             _stop = true;
-        }
-
-        /// <summary>Removes a <param name="key" /> (and value) from the cache, if it exists.</summary>
-        public void Invalidate(TKey key)
-        {
-            lock (_lock)
-            {
-                InvalidateCore(key);
-            }
-        }
-
-        /// <summary>Removes a a number of <paramref name="keys" /> (and value) from the cache, if it exists.</summary>
-        public void Invalidate(IEnumerable<TKey> keys)
-        {
-            lock (_lock)
-            {
-                foreach (var key in keys)
-                {
-                    InvalidateCore(key);
-                }
-            }
-        }
-
-        protected abstract void InvalidateCore(TKey key);
-
-        /// <remarks>Must be called from within the lock</remarks>
-        protected void OnInvalidated(TKey key)
-        {
-            Invalidated?.Invoke(this, key);
         }
 
     }

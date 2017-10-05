@@ -60,7 +60,7 @@ namespace UnitTests
             GC.KeepAlive(keys);
         }
 
-        static void ReadMixKeys(string[] keys, IReadThroughCache<string, string> cache)
+        static void ReadMixKeys(string[] keys, ICache<string, string> cache)
         {
             Task[] tasks = new Task[4];
             for (int i = 0; i < tasks.Length; i++)
@@ -72,13 +72,13 @@ namespace UnitTests
             Task.WaitAll(tasks);
         }
 
-        static void ReadMany(string[] keys, IReadThroughCache<string, string> cache, int offset, int count)
+        static void ReadMany(string[] keys, ICache<string, string> cache, int offset, int count)
         {
             for (int i = 0; i < count; i++)
             {
                 var index = (offset + i) % keys.Length;
                 var key = keys[index];
-                var read = cache.GetValueOrDefault(key);
+                var read = cache[key];
                 if (read != key)
                     Assert.AreEqual(key, read);
             }
@@ -120,7 +120,7 @@ namespace UnitTests
                 string read;
                 if (!cache.TryGetValue(key, out read))
                 {
-                    read = valueIsKey.GetValueOrDefault(key);
+                    read = valueIsKey[key];
                     cache.TryAdd(key, key);
                 }
 
