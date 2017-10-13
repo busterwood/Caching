@@ -43,7 +43,7 @@ The design is insipred by "generational garbage collection" in that:
 * when a collection happens `Gen1` is thrown away and `Gen0` is moved to `Gen1`
 * when an item is read from `Gen1` it is promted back to `Gen0`
 
-Internally, `ReadThroughCache<TKey, TValue>` uses a lock (Monitor) to protect it's data structures, but the lock is released if a read to the underlying data source is required.
+Internally, `Cache<TKey, TValue>` uses a lock (Monitor) which is exposed as the `SyncLock` property. `ReadThroughCache<TKey, TValue>` releases the lock if a read to the `IDataSource<TKey,TValue>` is required, reacquiring the lock to update the cache after the read.
 
 ### When does a collection happen?
 
@@ -54,8 +54,8 @@ The `ReadThroughCache<TKey, TValue>` contructor takes two arguments that control
 
 One or both parameters neeed to be set, i.e.
 
-* you can just specify a `gen0Limit`, but then an the cache will never be cleared, even if it is not used again for a long time
-* you can just specify a `timeToLive` which will let the cache grow to any size but will ensure items not used for "a long time" are evicted
+* you can set a `gen0Limit`, but then the cache *might never* be cleared for a long time if the `gen0Limit` is never reached.
+* you can set a `timeToLive` which will let the cache *grow to any size* but will ensure items not used for "a long time" are evicted
 * you can specify both `gen0Limit` and `halfLife` to combine the attributes of both
 
 ### What is cached?
