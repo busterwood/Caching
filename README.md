@@ -3,27 +3,26 @@
 # Caching
 A low memory overhead read-through cache implemented using generations.
 
-The `GenerationalReadThroughCache<TKey, TValue>` is a read-though cache used for caching items read from an underlying data source.
+The design is layered so you can choose the functionality that you require:
+* `Cache<TKey, TValue>` is a thread-safe generational cache-aside class that you populated with data.
+* `ConcurrentCache<TKey, TValue>` extends `Cache<TKey, TValue>`to support concurrent reading and writing
+* `ReadThroughCache<TKey, TValue>` is a thread-safe generational cache that populates itself from an underlying data source.
+* `BatchReadThroughCache<TKey, TValue>` extends `ReadThroughCache<TKey, TValue>` adding support for reading multiple values for multiple keys in one call.
+* `ThunderingHerdProtection<TKey, TValue>` prevents concurrent read-through for the same key (see below)
+* `BatchThunderingHerdProtection<TKey, TValue>` prevents concurrent read-through for the multiple keys (see below)
 
 ## Usage
 
-`GenerationalReadThroughCache<TKey, TValue>` implementes the `IReadThroughCache<TKey, TValue>` interface, which has the methods such as:
-* `Maybe<TValue> Get(TKey key)` tries to get a value for a key
-* `Task<Maybe<TValue>> GetAsync(TKey key)` tries to get a value for a key asynchronusly
-* `Maybe<TValue>[] GetBatch(IReadOnlyCollection<TKey> keys)` tries to get the values associated with some keys
-* `Task<Maybe<TValue>[]> GetBatchAsync(IReadOnlyCollection<TKey> keys)` tries to get the values associated with the keys asynchronusly
-* `void Invalidate(TKey key)` evicts a specific key from the cache
-* `void Invalidate(IReadOnlycollection<TKey> keys)` some keys from the cache
+All caches implementes the basic the `ICache<TKey, TValue>` interface, which has methods such as:
+* `TValue this[TKey] { get; set; }` sets or tries to get a value for a key (returns `default(TValue)` is not found, i.e. null)
+* `Task<TValue> GetAsync(TKey key)` tries to get a value for a key asynchronusly
+* `int Count()` returns the number of items currently in the cache
+* `void Clear()` removes all items from the cache
+* `void Remove(TKey key)` evicts a specific key from the cache
 
-The return type is `Maybe<TValue>` is a struct that has a value or not, much like `Nullable<T>`, but work for both struct and class types.
-
-`IReadThroughCache<TKey, TValue>` also has the following *extension* methods which may make the cache easier to consume in existing code:
-
-* `bool TryGet(TKey key, out TValue value)` tries to get a value for a key
-* `TValue GetValueOrDefault(TKey key)` tries to get a value for a key
-* `Task<TValue> GetValueOrDefaultAsync(TKey key)` tries to get a value for a key
-* `TValue[] GetBatchValueOrDefault(IReadOnlyCollection<TKey> keys)` tries to get the values associated with some keys
-* `Task<TValue[]> GetBatchValueOfDefaultAsync(IReadOnlyCollection<TKey> keys)` tries to get the values associated with some keys
+Batch loading classes implement the `IBatchCache<TKey, TValue>` interface, which extends `ICache<TKey, TValue>` adding the following methods:
+* `TValue[] GetBatch(IReadOnlyCollection<TKey> keys)` tries to get the values associated with some keys
+* `Task<TValue[]> GetBatchAsync(IReadOnlyCollection<TKey> keys)` tries to get the values associated with the keys asynchronusly
 
 You can also compose caches with the following extension methods:
 * `WithGenerationalCache(int? gen0Limit, TimeSpan? timeToLive)` create a new read-through cache that has a Gen0 size limit and/or a periodic collection time
@@ -44,11 +43,11 @@ The design is insipred by "generational garbage collection" in that:
 * when a collection happens `Gen1` is thrown away and `Gen0` is moved to `Gen1`
 * when an item is read from `Gen1` it is promted back to `Gen0`
 
-Internally, `GenerationalReadThroughCache<TKey, TValue>` uses a lock (Monitor) to protect it's data structures, but the lock is released if a read to the underlying data source is required.
+Internally, `ReadThroughCache<TKey, TValue>` uses a lock (Monitor) to protect it's data structures, but the lock is released if a read to the underlying data source is required.
 
 ### When does a collection happen?
 
-The `GenerationalReadThroughCache<TKey, TValue>` contructor takes two arguments that control collection:
+The `ReadThroughCache<TKey, TValue>` contructor takes two arguments that control collection:
 
 * if a `gen0Limit` is set then a collection will occur when `Gen0` reaches that limit
 * if `timeToLive` is set then a an un-read entry will be evicted some time after this (unless the `gen0Limit` was reached since the last collection)
@@ -61,7 +60,7 @@ One or both parameters neeed to be set, i.e.
 
 ### What is cached?
 
-`GenerationalReadThroughCache<TKey, TValue>` remembers the results of all read-though operations, so it records the value for a key or it records that a *key does not have a value*.
+`ReadThroughCache<TKey, TValue>` remembers the results of all read-though operations, so it records the value for a key or it records that a *key does not have a value*.
 
 ### Performance and Memory
 
