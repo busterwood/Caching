@@ -45,11 +45,12 @@
     <Reference Include="System.Runtime.Caching" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="AsyncBatchReadThroughCacheTests.cs" />
     <Compile Include="BitPseudoLruMap.cs" />
-    <Compile Include="AsyncGenerationReadThroughCacheTests.cs" />
-    <Compile Include="ConcurrentGenerationalCacheTests.cs" />
-    <Compile Include="GenerationalCacheTests.cs" />
-    <Compile Include="GenerationalReadThroughCacheTests.cs" />
+    <Compile Include="AsyncReadThroughCacheTests.cs" />
+    <Compile Include="ConcurrentCacheTests.cs" />
+    <Compile Include="CacheTests.cs" />
+    <Compile Include="ReadThroughCacheTests.cs" />
     <Compile Include="ThunderingHerdOverheadTests.cs" />
     <Compile Include="MixedReadWriteOverheadTests.cs" />
     <Compile Include="PerformaceMonitor.cs" />

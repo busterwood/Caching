@@ -6,12 +6,13 @@ using System.Threading.Tasks;
 
 namespace BusterWood.Caching
 {
-    public class BitPseudoLruMap<TKey, TValue> : IReadThroughCache<TKey, TValue>
+    public class BitPseudoLruMap<TKey, TValue> : ICache<TKey, TValue>
     {
-        readonly IReadThroughCache<TKey, TValue> _nextLevel;
+        readonly IDataSource<TKey, TValue> _nextLevel;
         readonly object _lock;
         readonly int _capacity;
         readonly IEqualityComparer<TKey> comparer;
+        readonly IEqualityComparer<TValue> valueComparer = EqualityComparer<TValue>.Default;
         int[] buckets;
         Entry[] entries;
         BitArray recent;
@@ -27,7 +28,7 @@ namespace BusterWood.Caching
             public TValue value;         // Value of entry
         }
     
-        public BitPseudoLruMap(IReadThroughCache<TKey, TValue> nextLevel, int capacity)
+        public BitPseudoLruMap(IDataSource<TKey, TValue> nextLevel, int capacity)
         {
             if (nextLevel == null)
                 throw new ArgumentNullException(nameof(nextLevel));
@@ -41,38 +42,56 @@ namespace BusterWood.Caching
 
         public int Count => count;
 
+        public object SyncRoot => throw new NotImplementedException();
+
         /// <summary>Tries to get a value from this cache, or load it from the underlying cache</summary>
         /// <param name="key">Teh key to find</param>
         /// <returns>The value found, or default(T) if not found</returns>
-        public Maybe<TValue> Get(TKey key)
+        public TValue this[TKey key]
         {
-            lock (_lock)
+            get
             {
-                int i = FindEntry(key);
-                if (i >= 0)
+                lock (_lock)
                 {
-                    recent[i] = true;
-                    return Maybe.Some(entries[i].value);
+                    int i = FindEntry(key);
+                    if (i >= 0)
+                    {
+                        recent[i] = true;
+                        return entries[i].value;
+                    }
+                }
+
+                // key not found by this point
+                var loaded = _nextLevel[key]; // NOTE: possible blocking
+                if (valueComparer.Equals(loaded, default(TValue))) 
+                    return loaded;
+
+                lock (_lock)
+                {
+                    // about to add, check the limit
+                    if (count >= _capacity)
+                    {
+                        TKey lru = FindLeastRecentlyUsed();
+                        Remove(lru);
+                    }
+
+                    // a new item in the cache
+                    Insert(key, loaded, false);
+                    return loaded;
                 }
             }
-
-            // key not found by this point
-            var loaded = _nextLevel.Get(key);
-            if (!loaded.HasValue) // NOTE: possible blocking
-                return loaded;
-
-            lock(_lock)
+            set
             {
-                // about to add, check the limit
-                if (count >= _capacity)
+                lock(_lock)
                 {
-                    TKey lru = FindLeastRecentlyUsed();
-                    Remove(lru);
+                    // about to add, check the limit
+                    if (count >= _capacity)
+                    {
+                        TKey lru = FindLeastRecentlyUsed();
+                        Remove(lru);
+                    }
+                    Insert(key, value, false);
                 }
-
-                // a new item in the cache
-                Insert(key, loaded.Value, false);
-                return loaded;
             }
         }
 
@@ -232,7 +251,7 @@ namespace BusterWood.Caching
             recent = new BitArray(temp);
         }
 
-        public bool Remove(TKey key)
+        public void Remove(TKey key)
         {
             if (key == null)
             {
@@ -240,7 +259,7 @@ namespace BusterWood.Caching
             }
 
             if (buckets == null)
-                return false;
+                return;
 
             int hashCode = comparer.GetHashCode(key) & 0x7FFFFFFF;
             int bucket = hashCode % buckets.Length;
@@ -264,10 +283,8 @@ namespace BusterWood.Caching
                     recent[i] = false;
                     freeList = i;
                     freeCount++;
-                    return true;
                 }
             }
-            return false;
         }
 
         public static readonly int[] primes = {
@@ -277,8 +294,7 @@ namespace BusterWood.Caching
             187751, 225307, 270371, 324449, 389357, 467237, 560689, 672827, 807403, 968897, 1162687, 1395263,
             1674319, 2009191, 2411033, 2893249, 3471899, 4166287, 4999559, 5999471, 7199369};
 
-        public event InvalidatedHandler<TKey> Invalidated;
-        public event EvictedHandler<TKey, Maybe<TValue>> Evicted;
+        public event EvictionHandler<TKey, TValue> Evicted;
 
         public static int GetPrime(int min)
         {
@@ -337,47 +353,12 @@ namespace BusterWood.Caching
             return GetPrime(newSize);
         }
 
-        public void Invalidate(TKey key)
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task InvalidateAsync(TKey key)
-        {
-            throw new NotImplementedException();
-        }
-
-        public void Invalidate(IEnumerable<TKey> keys)
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task InvalidateAsync(IEnumerable<TKey> keys)
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task<Maybe<TValue>> GetAsync(TKey key)
-        {
-            throw new NotImplementedException();
-        }
-
-        public Maybe<TValue>[] GetBatch(IReadOnlyCollection<TKey> keys)
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task<Maybe<TValue>[]> GetBatchAsync(IReadOnlyCollection<TKey> keys)
-        {
-            throw new NotImplementedException();
-        }
-
-        public void Dispose()
-        {
-            throw new NotImplementedException();
-        }
-
         public void Clear()
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<TValue> GetAsync(TKey key)
         {
             throw new NotImplementedException();
         }

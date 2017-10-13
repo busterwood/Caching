@@ -5,12 +5,12 @@ namespace BusterWood.Caching
 {
     static class DictionaryExtensions
     {
-        public static Maybe<TValue> Get<TKey, TValue>(this Dictionary<TKey, TValue> dictionary, TKey key)
-        {
-            TValue value;
-            var got = dictionary.TryGetValue(key, out value);
-            return got ? Maybe.Some(value) : Maybe.None<TValue>();
-        }
+        //public static Maybe<TValue> Get<TKey, TValue>(this Dictionary<TKey, TValue> dictionary, TKey key)
+        //{
+        //    TValue value;
+        //    var got = dictionary.TryGetValue(key, out value);
+        //    return got ? Maybe.Some(value) : Maybe.None<TValue>();
+        //}
 
         /// <summary>
         /// Tries to get a value from <paramref name="dictionary"/>.  Returns TRUE if the value was already in the <paramref name="dictionary"/>,
@@ -43,15 +43,6 @@ namespace BusterWood.Caching
             foreach (var pair in items)
             {
                 dictionary.Add(pair.Key, pair.Value);
-            }
-        }
-
-        public static void AddRange<TKey, TValue>(this Dictionary<TKey, TValue> dictionary, IEnumerable<KeyValuePair<TKey, Maybe<TValue>>> items)
-        {
-            foreach (var pair in items)
-            {
-                if (pair.Value.HasValue)
-                    dictionary.Add(pair.Key, pair.Value.Value);
             }
         }
 

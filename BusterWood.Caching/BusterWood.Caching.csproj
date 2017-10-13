@@ -42,16 +42,17 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="CacheExtensions.cs" />
-    <Compile Include="ConcurrentGenerationalCache.cs" />
+    <Compile Include="ConcurrentCache.cs" />
     <Compile Include="DictionaryExtensions.cs" />
     <Compile Include="GenerationalBase.cs" />
-    <Compile Include="GenerationalCache.cs" />
+    <Compile Include="Cache.cs" />
+    <Compile Include="BatchReadThroughCache.cs" />
+    <Compile Include="IBatchDataSource.cs" />
     <Compile Include="ICache.cs" />
-    <Compile Include="IReadThroughCache.cs" />
-    <Compile Include="GenerationalReadThoughCache.cs" />
-    <Compile Include="Maybe.cs" />
+    <Compile Include="IDataSource.cs" />
+    <Compile Include="ReadThoughCache.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="ReadThroughCache.cs" />
+    <Compile Include="BatchThunderingHerdProtection.cs" />
     <Compile Include="ThunderingHerdProtection.cs" />
   </ItemGroup>
   <ItemGroup>

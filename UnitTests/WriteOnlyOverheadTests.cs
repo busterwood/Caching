@@ -26,7 +26,7 @@ namespace UnitTests
             var cache = new BitPseudoLruMap<string, string>(valueIsKey, items / 2);
             foreach (var key in keys)
             {
-                Assert.AreEqual(key, cache.GetValueOrDefault(key));
+                Assert.AreEqual(key, cache[key]);
             }
             sw.Stop();
             var allocated = GC.GetTotalMemory(false) - starting;
@@ -45,10 +45,10 @@ namespace UnitTests
             string[] keys = CreateKeyStrings(items);
             var starting = GC.GetTotalMemory(true);
             sw.Start();
-            var cache = new GenerationalReadThoughCache<string, string>(valueIsKey, items / 4, null);
+            var cache = new ReadThroughCache<string, string>(valueIsKey, items / 4, null);
             foreach (var key in keys)
             {
-                Assert.AreEqual(key, cache.GetValueOrDefault(key));
+                Assert.AreEqual(key, cache[key]);
             }
             sw.Stop();
             var allocated = GC.GetTotalMemory(false) - starting;
@@ -72,7 +72,7 @@ namespace UnitTests
             var cache = new BitPseudoLruMap<string, string>(valueIsKey, items);
             foreach (var key in keys)
             {
-                Assert.AreEqual(key, cache.GetValueOrDefault(key));
+                Assert.AreEqual(key, cache[key]);
             }
             sw.Stop();
             var allocated = GC.GetTotalMemory(false) - starting;
@@ -92,10 +92,10 @@ namespace UnitTests
             string[] keys = CreateKeyStrings(items);
             var starting = GC.GetTotalMemory(true);
             sw.Start();
-            var cache = new GenerationalReadThoughCache<string, string>(valueIsKey, items / 2, null);
+            var cache = new ReadThroughCache<string, string>(valueIsKey, items / 2, null);
             foreach (var key in keys)
             {
-                Assert.AreEqual(key, cache.GetValueOrDefault(key));
+                Assert.AreEqual(key, cache[key]);
             }
             sw.Stop();
             var allocated = GC.GetTotalMemory(false) - starting;
@@ -115,10 +115,10 @@ namespace UnitTests
             string[] keys = CreateKeyStrings(items);
             var starting = GC.GetTotalMemory(true);
             sw.Start();
-            var cache = new GenerationalReadThoughCache<string, string>(valueIsKey, null, TimeSpan.FromMilliseconds(200));
+            var cache = new ReadThroughCache<string, string>(valueIsKey, null, TimeSpan.FromMilliseconds(200));
             foreach (var key in keys)
             {
-                Assert.AreEqual(key, cache.GetValueOrDefault(key));
+                Assert.AreEqual(key, cache[key]);
             }
             sw.Stop();
             var allocated = GC.GetTotalMemory(false) - starting;
@@ -146,7 +146,7 @@ namespace UnitTests
                 var got = cache.Get(key);
                 if (got == null)
                 {
-                    got = valueIsKey.GetValueOrDefault(key);
+                    got = valueIsKey[key];
                     cache.Add(key, got, new CacheItemPolicy { SlidingExpiration = TimeSpan.FromSeconds(10) });
                 }
             }
@@ -178,7 +178,7 @@ namespace UnitTests
                     string got;
                     if (!cache.TryGetValue(key, out got))
                     {
-                        got = valueIsKey.GetValueOrDefault(key);
+                        got = valueIsKey[key];
                         cache.Add(key, key);
                     }
                 }
@@ -209,7 +209,7 @@ namespace UnitTests
                 string got;
                 if (!cache.TryGetValue(key, out got))
                 {
-                    got = valueIsKey.GetValueOrDefault(key);
+                    got = valueIsKey[key];
                     cache.TryAdd(key, key);
                 }
             }

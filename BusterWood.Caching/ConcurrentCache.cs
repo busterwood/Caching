@@ -1,22 +1,21 @@
 ﻿using System;
-using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace BusterWood.Caching
 {
-    /// <summary>A concurrent version of the <see cref="GenerationalCache{TKey, TValue}"/> that uses a number of smaller caches to provide concurrent read and modification</summary>
-    public class ConcurrentGenerationalCache<TKey, TValue> : ICache<TKey, TValue>
+    /// <summary>A concurrent version of the <see cref="Cache{TKey, TValue}"/> that uses a number of smaller caches to provide concurrent read and modification</summary>
+    public class ConcurrentCache<TKey, TValue> : ICache<TKey, TValue>
     {
-        readonly GenerationalCache<TKey, TValue>[] _partitions;
+        readonly Cache<TKey, TValue>[] _partitions;
         readonly int _partitionCount;
 
-        /// <summary>Allows a consumer to be notified when a entry has been removed from the cache by one of the <see cref="Invalidate(TKey)"/> methods</summary>
-        public event InvalidatedHandler<TKey> Invalidated;
+        public event EvictionHandler<TKey, TValue> Evicted;
 
         /// <summary>Create a new cache that has a Gen0 size limit and/or a periodic collection time</summary>
         /// <param name="gen0Limit">(Optional) limit on the number of items allowed in Gen0 before a collection</param>
         /// <param name="timeToLive">(Optional) time period after which a unread item is evicted from the cache</param>
-        /// <param name="partitions">The number of partitions to split the cache into, defaults to <see cref="Environment.ProcessorCount"/></param>
-        public ConcurrentGenerationalCache(int? gen0Limit, TimeSpan? timeToLive, int partitions = 0)
+        /// <param name="partitions">The number of paritions to split the cache into, defaults to <see cref="Environment.ProcessorCount"/></param>
+        public ConcurrentCache(int? gen0Limit, TimeSpan? timeToLive, int partitions = 0)
         {
             if (partitions == 0)
                 partitions = Environment.ProcessorCount;
@@ -24,13 +23,15 @@ namespace BusterWood.Caching
                 throw new ArgumentOutOfRangeException(nameof(partitions), partitions, "Must be one or more");
 
             _partitionCount = partitions;
-            _partitions = new GenerationalCache<TKey, TValue>[partitions];
+            _partitions = new Cache<TKey, TValue>[partitions];
             for (int i = 0; i < partitions; i++)
             {
-                _partitions[i] = new GenerationalCache<TKey, TValue>(gen0Limit / partitions, timeToLive);
-                _partitions[i].Invalidated += Partition_Invalidated;
+                _partitions[i] = new Cache<TKey, TValue>(gen0Limit / partitions, timeToLive);
+                _partitions[i].Evicted += (sender, args) => Evicted(sender, args);
             }
         }
+
+        public object SyncRoot => throw new NotImplementedException();
 
         internal void ForceCollect()
         {
@@ -38,12 +39,6 @@ namespace BusterWood.Caching
             {
                 p.ForceCollect();
             }
-        }
-
-        /// <summary>Bubble up the invalidation event</summary>
-        void Partition_Invalidated(object sender, TKey key)
-        {
-            Invalidated?.Invoke(sender, key);
         }
 
         public int Count
@@ -59,13 +54,18 @@ namespace BusterWood.Caching
             }
         }
 
-        /// <summary>Tries to get a value for a key</summary>
-        /// <param name="key">The key to find</param>
-        /// <returns>The <see cref="Maybe.Some{TKey}(TKey)"/> if the item was found in the this cache or the underlying data source, otherwise <see cref="Maybe.None{TKey}"/></returns>
-        public Maybe<TValue> Get(TKey key)
+        public TValue this[TKey key]
         {
-            int idx = PartitionIndex(key);
-            return _partitions[idx].Get(key);
+            get
+            {
+                int idx = PartitionIndex(key);
+                return _partitions[idx][key];
+            }
+            set
+            {
+                int idx = PartitionIndex(key);
+                _partitions[idx][key] = value;
+            }
         }
 
         public void Clear()
@@ -76,25 +76,13 @@ namespace BusterWood.Caching
             }
         }
 
-        /// <summary>Removes a a number of <paramref name="keys" /> (and value) from the cache, if it exists.</summary>
-        public void Invalidate(IEnumerable<TKey> keys)
-        {
-            foreach (var k in keys)
-                Invalidate(k);
-        }
+        public Task<TValue> GetAsync(TKey key) => Task.FromResult(this[key]);
 
         /// <summary>Removes a <param name="key" /> (and value) from the cache, if it exists.</summary>
-        public void Invalidate(TKey key)
+        public void Remove(TKey key)
         {
             int idx = PartitionIndex(key);
-            _partitions[idx].Invalidate(key);
-        }
-
-        /// <summary>Sets the <paramref name="value"/> associated with a <paramref name="key"/></summary>
-        public void Set(TKey key, TValue value)
-        {
-            int idx = PartitionIndex(key);
-            _partitions[idx].Set(key, value);
+            _partitions[idx].Remove(key);
         }
 
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
@@ -118,5 +106,5 @@ namespace BusterWood.Caching
                 return positiveHashCode % _partitionCount;            
         }
 
-   }
+    }
 }
