@@ -24,8 +24,23 @@ namespace BusterWood.Caching
             return new ThunderingHerdProtection<TKey, TValue>(cache);
         }
 
+        public static TValue GetOrAdd<TKey, TValue>(this ICache<TKey, TValue> cache, TKey key, Func<TKey, TValue> valueFactory) where TValue : class
+        {
+            if (cache == null) throw new ArgumentNullException(nameof(cache));
+            if (valueFactory == null) throw new ArgumentNullException(nameof(valueFactory));
+            lock (cache.SyncRoot)
+            {
+                var value = cache[key];
+                if (value == null)
+                    cache[key] = value = valueFactory(key);
+                return value;
+            }
+        }
+
         public static void AddOrUpdateRange<TKey, TValue>(this ICache<TKey, TValue> cache, IEnumerable<KeyValuePair<TKey, TValue>> pairs)
         {
+            if (cache == null) throw new ArgumentNullException(nameof(cache));
+            if (pairs == null) throw new ArgumentNullException(nameof(pairs));
             lock (cache.SyncRoot)
             {
                 foreach (var p in pairs)
@@ -37,7 +52,9 @@ namespace BusterWood.Caching
 
         public static void RemoveRange<TKey, TValue>(this ICache<TKey, TValue> cache, IEnumerable<TKey> keys)
         {
-            lock(cache.SyncRoot)
+            if (cache == null) throw new ArgumentNullException(nameof(cache));
+            if (keys == null) throw new ArgumentNullException(nameof(keys));
+            lock (cache.SyncRoot)
             {
                 foreach (var k in keys)
                 {

@@ -42,7 +42,7 @@ namespace BusterWood.Caching
 
         public int Count => count;
 
-        public object SyncRoot => throw new NotImplementedException();
+        public object SyncRoot { get { throw new NotImplementedException(); } }
 
         /// <summary>Tries to get a value from this cache, or load it from the underlying cache</summary>
         /// <param name="key">Teh key to find</param>

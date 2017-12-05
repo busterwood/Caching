@@ -31,7 +31,7 @@ namespace BusterWood.Caching
             }
         }
 
-        public object SyncRoot => throw new NotImplementedException();
+        public object SyncRoot { get { throw new NotImplementedException(); } }
 
         internal void ForceCollect()
         {
