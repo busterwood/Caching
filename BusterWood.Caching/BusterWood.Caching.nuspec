@@ -2,12 +2,12 @@
 <package >
   <metadata>
     <id>BusterWood.Caching</id>
-    <version>2.1.0</version>
+    <version>2.2.0</version>
     <authors>BusterWood</authors>
     <description>A cache-aside and read though cache with optional thundering herd protection.</description>
     <projectUrl>https://github.com/busterwood/Caching</projectUrl>
     <licenseUrl>https://github.com/busterwood/Caching/blob/master/LICENSE.txt</licenseUrl>
-    <releaseNotes>Now targes .NET 4.5</releaseNotes>
+    <releaseNotes>Added TryAdd extension method</releaseNotes>
     <references>
       <reference file="BusterWood.Caching.dll" />
     </references>

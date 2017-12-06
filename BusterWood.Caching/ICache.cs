@@ -19,7 +19,7 @@ namespace BusterWood.Caching
         void Clear();
 
         /// <summary>Removes a <param name="key"/> (and value) from the cache, if it exists.</summary>
-        void Remove(TKey key);
+        bool Remove(TKey key);
 
         /// <summary>Optional callback during the eviction process.  Maybe useful if the evicted items need disposing</summary>
         event EvictionHandler<TKey, TValue> Evicted;

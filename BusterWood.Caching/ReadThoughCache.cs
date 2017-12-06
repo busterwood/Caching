@@ -152,12 +152,13 @@ namespace BusterWood.Caching
             }
         }
 
-        public void Remove(TKey key)
+        public bool Remove(TKey key)
         {
             lock (SyncRoot)
             {
-                if (!_gen0.Remove(key))
-                    _gen1?.Remove(key);
+                if (_gen0.Remove(key))
+                    return true;
+                return _gen1?.Remove(key) == true;
             }
         }
 

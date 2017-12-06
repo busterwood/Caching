@@ -31,7 +31,7 @@ namespace BusterWood.Caching
             }
         }
 
-        public object SyncRoot { get { throw new NotImplementedException(); } }
+        public object SyncRoot { get { throw new NotImplementedException("The concurrent cache does not have a single root object for locking"); } }
 
         internal void ForceCollect()
         {
@@ -79,10 +79,10 @@ namespace BusterWood.Caching
         public Task<TValue> GetAsync(TKey key) => Task.FromResult(this[key]);
 
         /// <summary>Removes a <param name="key" /> (and value) from the cache, if it exists.</summary>
-        public void Remove(TKey key)
+        public bool Remove(TKey key)
         {
             int idx = PartitionIndex(key);
-            _partitions[idx].Remove(key);
+            return _partitions[idx].Remove(key);
         }
 
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]

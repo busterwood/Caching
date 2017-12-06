@@ -24,6 +24,7 @@ namespace BusterWood.Caching
             return new ThunderingHerdProtection<TKey, TValue>(cache);
         }
 
+        /// <summary>Gets the existing value in the cache or adds a new value created by the <paramref name="valueFactory"/></summary>
         public static TValue GetOrAdd<TKey, TValue>(this ICache<TKey, TValue> cache, TKey key, Func<TKey, TValue> valueFactory) where TValue : class
         {
             if (cache == null) throw new ArgumentNullException(nameof(cache));
@@ -37,6 +38,7 @@ namespace BusterWood.Caching
             }
         }
 
+        /// <summary>Adds or updates multiple values</summary>
         public static void AddOrUpdateRange<TKey, TValue>(this ICache<TKey, TValue> cache, IEnumerable<KeyValuePair<TKey, TValue>> pairs)
         {
             if (cache == null) throw new ArgumentNullException(nameof(cache));
@@ -50,6 +52,7 @@ namespace BusterWood.Caching
             }
         }
 
+        /// <summary>Removes multiple keys from the cache</summary>
         public static void RemoveRange<TKey, TValue>(this ICache<TKey, TValue> cache, IEnumerable<TKey> keys)
         {
             if (cache == null) throw new ArgumentNullException(nameof(cache));
@@ -62,5 +65,24 @@ namespace BusterWood.Caching
                 }
             }
         }
+
+        /// <summary>Tries to add a value to the cache, returns TRUE if the value was added, FALSE if the cache already contains an value for this key</summary>
+        public static bool TryAdd<TKey, TValue>(this ICache<TKey, TValue> cache, TKey key, TValue value) where TValue : class
+        {
+            if (cache == null) throw new ArgumentNullException(nameof(cache));
+            if (value == null) throw new ArgumentNullException(nameof(value));
+            lock (cache.SyncRoot)
+            {
+                var existing = cache[key];
+                if (value == null)
+                {
+                    cache[key] = value;
+                    return true;
+                }
+                return false;
+            }
+        }
+
+
     }
 }

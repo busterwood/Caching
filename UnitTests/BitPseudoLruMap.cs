@@ -251,7 +251,7 @@ namespace BusterWood.Caching
             recent = new BitArray(temp);
         }
 
-        public void Remove(TKey key)
+        public bool Remove(TKey key)
         {
             if (key == null)
             {
@@ -259,7 +259,7 @@ namespace BusterWood.Caching
             }
 
             if (buckets == null)
-                return;
+                return false;
 
             int hashCode = comparer.GetHashCode(key) & 0x7FFFFFFF;
             int bucket = hashCode % buckets.Length;
@@ -283,8 +283,10 @@ namespace BusterWood.Caching
                     recent[i] = false;
                     freeList = i;
                     freeCount++;
+                    return true;
                 }
             }
+            return false;
         }
 
         public static readonly int[] primes = {
