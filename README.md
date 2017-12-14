@@ -4,12 +4,12 @@
 A low memory overhead read-through cache implemented using generations.
 
 The design is layered so you can choose the functionality that you require:
-* `Cache<TKey, TValue>` is a thread-safe generational cache-aside class that you populated with data.
-* `ConcurrentCache<TKey, TValue>` extends `Cache<TKey, TValue>`to support concurrent reading and writing
+* `Cache<TKey, TValue>` is a thread-safe generational cache-aside class that you populate with data.
+* `ConcurrentCache<TKey, TValue>` extends `Cache<TKey, TValue>`to support concurrent reading and writing.
 * `ReadThroughCache<TKey, TValue>` is a thread-safe generational cache that populates itself from an underlying data source.
 * `BatchReadThroughCache<TKey, TValue>` extends `ReadThroughCache<TKey, TValue>` adding support for reading multiple values for multiple keys in one call.
-* `ThunderingHerdProtection<TKey, TValue>` prevents concurrent read-through for the same key (see below)
-* `BatchThunderingHerdProtection<TKey, TValue>` prevents concurrent read-through for the multiple keys (see below)
+* `ThunderingHerdProtection<TKey, TValue>` prevents concurrent read-through for the same key (see below).
+* `BatchThunderingHerdProtection<TKey, TValue>` prevents concurrent read-through for multiple keys (see below).
 
 ## Usage
 
