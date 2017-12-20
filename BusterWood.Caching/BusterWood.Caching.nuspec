@@ -2,12 +2,12 @@
 <package >
   <metadata>
     <id>BusterWood.Caching</id>
-    <version>2.2.0</version>
+    <version>2.3.0</version>
     <authors>BusterWood</authors>
     <description>A cache-aside and read though cache with optional thundering herd protection.</description>
     <projectUrl>https://github.com/busterwood/Caching</projectUrl>
     <licenseUrl>https://github.com/busterwood/Caching/blob/master/LICENSE.txt</licenseUrl>
-    <releaseNotes>Added TryAdd extension method</releaseNotes>
+    <releaseNotes>Add Keys extension method for getting the keys in the cache</releaseNotes>
     <references>
       <reference file="BusterWood.Caching.dll" />
     </references>

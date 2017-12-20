@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace BusterWood.Caching
 {
@@ -83,6 +84,17 @@ namespace BusterWood.Caching
             }
         }
 
-
+        /// <summary>Returns a snapshot of the keys in the cache at a point in time</summary>
+        public static TKey[] Keys<TKey, TValue>(this Cache<TKey, TValue> cache)
+        {
+            lock (cache.SyncRoot)
+            {
+                var keys = new TKey[cache.Count];
+                cache._gen0.Keys.CopyTo(keys, 0);
+                if (cache._gen1 != null)
+                    cache._gen1.Keys.CopyTo(keys, cache._gen0.Count);
+                return keys;
+            }
+        }
     }
 }
