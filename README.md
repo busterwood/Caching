@@ -1,3 +1,7 @@
+# DEPRICATED
+
+Code has moved to https://github.com/busterwood/Goodies
+
 [![Nuget](https://img.shields.io/nuget/v/BusterWood.Caching.svg)](https://www.nuget.org/packages/BusterWood.Caching)
 
 # Caching
